@@ -1,649 +1,350 @@
-﻿//#include "cuda_runtime.h"
-//#include "device_launch_parameters.h"
-//
-//#include <stdio.h>
-//#include <stdlib.h>
-//#include <ctype.h>
-//#include <math.h>
-//#include <time.h>
-//#include <cuda.h>
-//
-//#define MIK_WARP_PER_SM 4
-//#define MIK_SM_NM 28
-//#define THREADS_IN_WARP 32
-//
-//__shared__ int IP[] =
-//{
-//    58, 50, 42, 34, 26, 18, 10, 2,
-//    60, 52, 44, 36, 28, 20, 12, 4,
-//    62, 54, 46, 38, 30, 22, 14, 6,
-//    64, 56, 48, 40, 32, 24, 16, 8,
-//    57, 49, 41, 33, 25, 17,  9, 1,
-//    59, 51, 43, 35, 27, 19, 11, 3,
-//    61, 53, 45, 37, 29, 21, 13, 5,
-//    63, 55, 47, 39, 31, 23, 15, 7
-//};
-//
-//__shared__ int E[] =
-//{
-//    32,  1,  2,  3,  4,  5,
-//    4,  5,  6,  7,  8,  9,
-//    8,  9, 10, 11, 12, 13,
-//    12, 13, 14, 15, 16, 17,
-//    16, 17, 18, 19, 20, 21,
-//    20, 21, 22, 23, 24, 25,
-//    24, 25, 26, 27, 28, 29,
-//    28, 29, 30, 31, 32,  1
-//};
-//
-//__shared__ int P[] =
-//{
-//    16,  7, 20, 21,
-//    29, 12, 28, 17,
-//    1, 15, 23, 26,
-//    5, 18, 31, 10,
-//    2,  8, 24, 14,
-//    32, 27,  3,  9,
-//    19, 13, 30,  6,
-//    22, 11,  4, 25
-//};
-//
-//__shared__ int FP[] =
-//{
-//    40, 8, 48, 16, 56, 24, 64, 32,
-//    39, 7, 47, 15, 55, 23, 63, 31,
-//    38, 6, 46, 14, 54, 22, 62, 30,
-//    37, 5, 45, 13, 53, 21, 61, 29,
-//    36, 4, 44, 12, 52, 20, 60, 28,
-//    35, 3, 43, 11, 51, 19, 59, 27,
-//    34, 2, 42, 10, 50, 18, 58, 26,
-//    33, 1, 41,  9, 49, 17, 57, 25
-//};
-//
-//__shared__ int S1[4][16] =
-//{
-//        14,  4, 13,  1,  2, 15, 11,  8,  3, 10,  6, 12,  5,  9,  0,  7,
-//        0, 15,  7,  4, 14,  2, 13,  1, 10,  6, 12, 11,  9,  5,  3,  8,
-//        4,  1, 14,  8, 13,  6,  2, 11, 15, 12,  9,  7,  3, 10,  5,  0,
-//        15, 12,  8,  2,  4,  9,  1,  7,  5, 11,  3, 14, 10,  0,  6, 13
-//};
-//
-//__shared__ int S2[4][16] =
-//{
-//    15,  1,  8, 14,  6, 11,  3,  4,  9,  7,  2, 13, 12,  0,  5, 10,
-//    3, 13,  4,  7, 15,  2,  8, 14, 12,  0,  1, 10,  6,  9, 11,  5,
-//    0, 14,  7, 11, 10,  4, 13,  1,  5,  8, 12,  6,  9,  3,  2, 15,
-//    13,  8, 10,  1,  3, 15,  4,  2, 11,  6,  7, 12,  0,  5, 14,  9
-//};
-//
-//__shared__ int S3[4][16] =
-//{
-//    10,  0,  9, 14,  6,  3, 15,  5,  1, 13, 12,  7, 11,  4,  2,  8,
-//    13,  7,  0,  9,  3,  4,  6, 10,  2,  8,  5, 14, 12, 11, 15,  1,
-//    13,  6,  4,  9,  8, 15,  3,  0, 11,  1,  2, 12,  5, 10, 14,  7,
-//    1, 10, 13,  0,  6,  9,  8,  7,  4, 15, 14,  3, 11,  5,  2, 12
-//};
-//
-//__shared__ int S4[4][16] =
-//{
-//    7, 13, 14,  3,  0,  6,  9, 10,  1,  2,  8,  5, 11, 12,  4, 15,
-//    13,  8, 11,  5,  6, 15,  0,  3,  4,  7,  2, 12,  1, 10, 14,  9,
-//    10,  6,  9,  0, 12, 11,  7, 13, 15,  1,  3, 14,  5,  2,  8,  4,
-//    3, 15,  0,  6, 10,  1, 13,  8,  9,  4,  5, 11, 12,  7,  2, 14
-//};
-//
-//__shared__ int S5[4][16] =
-//{
-//    2, 12,  4,  1,  7, 10, 11,  6,  8,  5,  3, 15, 13,  0, 14,  9,
-//    14, 11,  2, 12,  4,  7, 13,  1,  5,  0, 15, 10,  3,  9,  8,  6,
-//    4,  2,  1, 11, 10, 13,  7,  8, 15,  9, 12,  5,  6,  3,  0, 14,
-//    11,  8, 12,  7,  1, 14,  2, 13,  6, 15,  0,  9, 10,  4,  5,  3
-//};
-//
-//__shared__ int S6[4][16] =
-//{
-//    12,  1, 10, 15,  9,  2,  6,  8,  0, 13,  3,  4, 14,  7,  5, 11,
-//    10, 15,  4,  2,  7, 12,  9,  5,  6,  1, 13, 14,  0, 11,  3,  8,
-//    9, 14, 15,  5,  2,  8, 12,  3,  7,  0,  4, 10,  1, 13, 11,  6,
-//    4,  3,  2, 12,  9,  5, 15, 10, 11, 14,  1,  7,  6,  0,  8, 13
-//};
-//
-//__shared__ int S7[4][16] =
-//{
-//    4, 11,  2, 14, 15,  0,  8, 13,  3, 12,  9,  7,  5, 10,  6,  1,
-//    13,  0, 11,  7,  4,  9,  1, 10, 14,  3,  5, 12,  2, 15,  8,  6,
-//    1,  4, 11, 13, 12,  3,  7, 14, 10, 15,  6,  8,  0,  5,  9,  2,
-//    6, 11, 13,  8,  1,  4, 10,  7,  9,  5,  0, 15, 14,  2,  3, 12
-//};
-//
-//__shared__ int S8[4][16] =
-//{
-//    13,  2,  8,  4,  6, 15, 11,  1, 10,  9,  3, 14,  5,  0, 12,  7,
-//    1, 15, 13,  8, 10,  3,  7,  4, 12,  5,  6, 11,  0, 14,  9,  2,
-//    7, 11,  4,  1,  9, 12, 14,  2,  0,  6, 10, 13, 15,  3,  5,  8,
-//    2,  1, 14,  7,  4, 10,  8, 13, 15, 12,  9,  0,  3,  5,  6, 11
-//};
-//
-//__shared__ int PC1[] =
-//{
-//    57, 49, 41, 33, 25, 17,  9,
-//    1, 58, 50, 42, 34, 26, 18,
-//    10,  2, 59, 51, 43, 35, 27,
-//    19, 11,  3, 60, 52, 44, 36,
-//    63, 55, 47, 39, 31, 23, 15,
-//    7, 62, 54, 46, 38, 30, 22,
-//    14,  6, 61, 53, 45, 37, 29,
-//    21, 13,  5, 28, 20, 12,  4
-//};
-//
-//__shared__ int PC2[] =
-//{
-//    14, 17, 11, 24,  1,  5,
-//    3, 28, 15,  6, 21, 10,
-//    23, 19, 12,  4, 26,  8,
-//    16,  7, 27, 20, 13,  2,
-//    41, 52, 31, 37, 47, 55,
-//    30, 40, 51, 45, 33, 48,
-//    44, 49, 39, 56, 34, 53,
-//    46, 42, 50, 36, 29, 32
-//};
-//
-//__shared__ int SHIFTS[] = { 1, 1, 2, 2, 2, 2, 2, 2, 1, 2, 2, 2, 2, 2, 2, 1 };
-//
-//FILE* out;
-//int LEFT[17][32], RIGHT[17][32];
-//int IPtext[64];
-//int EXPtext[48];
-//int XORtext[48];
-//int X[8][6];
-//int X2[32];
-//int R[32];
-//__shared__ int key56bit[56];
-//__shared__ int key48bit[17][48];
-//int CIPHER[64];
-//int ENCRYPTED[64];
-//
-//void expansion_function(int pos, int text)
-//{
-//    for (int i = 0; i < 48; i++)
-//    {
-//        if (E[i] == pos + 1) {
-//            EXPtext[i] = text;
-//        }
-//    }
-//}
-//
-//int initialPermutation(int pos, int text)
-//{
-//    int i;
-//    for (i = 0; i < 64; i++)
-//    {
-//        if (IP[i] == pos + 1) {
-//            break;
-//        }
-//    }
-//    IPtext[i] = text;
-//}
-//
-//__device__ int F1(int i)
-//{
-//    int r, c, b[6];
-//
-//    for (int j = 0; j < 6; j++) {
-//        b[j] = X[i][j];
-//    }
-//
-//    r = b[0] * 2 + b[5];
-//    c = 8 * b[1] + 4 * b[2] + 2 * b[3] + b[4];
-//
-//    if (i == 0) {
-//        return S1[r][c];
-//    }
-//    else if (i == 1) {
-//        return S2[r][c];
-//    }
-//    else if (i == 2) {
-//        return S3[r][c];
-//    }
-//    else if (i == 3) {
-//        return S4[r][c];
-//    }
-//    else if (i == 4) {
-//        return S5[r][c];
-//    }
-//    else if (i == 5) {
-//        return S6[r][c];
-//    }
-//    else if (i == 6) {
-//        return S7[r][c];
-//    }
-//    else if (i == 7) {
-//        return S8[r][c];
-//    }
-//}
-//
-//int XOR(int a, int b) {
-//    return (a ^ b);
-//}
-//
-//int ToBits(int value)
-//{
-//    int k, j, m;
-//    static int i;
-//
-//    if (i % 32 == 0) {
-//        i = 0;
-//    }
-//
-//    for (j = 3; j >= 0; j--)
-//    {
-//        m = 1 << j;
-//        k = value & m;
-//        if (k == 0) {
-//            X2[3 - j + i] = '0' – 48;
-//        }
-//        else {
-//            X2[3 - j + i] = '1' – 48;
-//        }
-//    }
-//
-//    i = i + 4;
-//}
-//
-//int SBox(int XORtext[])
-//{
-//    int k = 0;
-//    for (int i = 0; i < 8; i++)
-//    {
-//        for (int j = 0; j < 6; j++) {
-//            X[i][j] = XORtext[k++];
-//        }
-//    }
-//
-//    int value;
-//    for (int i = 0; i < 8; i++)
-//    {
-//        value = F1(i);
-//        ToBits(value);
-//    }
-//}
-//
-//int PBox(int pos, int text)
-//{
-//    int i;
-//    for (i = 0; i < 32; i++)
-//    {
-//        if (P[i] == pos + 1) {
-//            break;
-//        }
-//    }
-//    R[i] = text;
-//}
-//
-//void cipher(int Round, int mode)
-//{
-//    for (int i = 0; i < 32; i++) {
-//        expansion_function(i, RIGHT[Round – 1][i]);
-//    }
-//
-//    for (int i = 0; i < 48; i++)
-//    {
-//        if (mode == 0) {
-//            XORtext[i] = XOR(EXPtext[i], key48bit[Round][i]);
-//        }
-//        else {
-//            XORtext[i] = XOR(EXPtext[i], key48bit[17 – Round][i]);
-//        }
-//    }
-//
-//    SBox(XORtext);
-//
-//    for (int i = 0; i < 32; i++) {
-//        PBox(i, X2[i]);
-//    }
-//
-//    for (int i = 0; i < 32; i++) {
-//        RIGHT[Round][i] = XOR(LEFT[Round – 1][i], R[i]);
-//    }
-//}
-//
-//void finalPermutation(int pos, int text)
-//{
-//    int i;
-//    for (i = 0; i < 64; i++)
-//    {
-//        if (FP[i] == pos + 1) {
-//            break;
-//        }
-//    }
-//    ENCRYPTED[i] = text;
-//}
-//
-//void convertToBinary(int n)
-//{
-//    int k, m;
-//    for (int i = 7; i >= 0; i--)
-//    {
-//        m = 1 << i;
-//        k = n & m;
-//
-//        if (k == 0) {
-//            fprintf(out, "0");
-//        }
-//        else {
-//            fprintf(out, "1");
-//        }
-//    }
-//}
-//
-//int convertCharToBit(long int n)
-//{
-//    FILE* inp = fopen("input.txt", "rb");
-//    out = fopen("bits.txt", "wb+");
-//    char ch;
-//    int i = n * 8;
-//
-//    while (i)
-//    {
-//        ch = fgetc(inp);
-//        if (ch == -1) {
-//            break;
-//        }
-//        i--;
-//        convertToBinary(ch);
-//    }
-//    fclose(out);
-//    fclose(inp);
-//}
-//
-//void Encryption(long int plain[])
-//{
-//    out = fopen("cipher.txt", "ab+");
-//    for (int i = 0; i < 64; i++) {
-//        initialPermutation(i, plain[i]);
-//    }
-//
-//    for (int i = 0; i < 32; i++) {
-//        LEFT[0][i] = IPtext[i];
-//    }
-//
-//    for (int i = 32; i < 64; i++) {
-//        RIGHT[0][i – 32] = IPtext[i];
-//    }
-//
-//    for (int k = 1; k < 17; k++)
-//    {
-//        cipher(k, 0);
-//
-//        for (int i = 0; i < 32; i++)
-//            LEFT[k][i] = RIGHT[k – 1][i];
-//    }
-//
-//    for (int i = 0; i < 64; i++)
-//    {
-//        if (i < 32) {
-//            CIPHER[i] = RIGHT[16][i];
-//        }
-//        else {
-//            CIPHER[i] = LEFT[16][i – 32];
-//        }
-//        finalPermutation(i, CIPHER[i]);
-//    }
-//
-//    for (int i = 0; i < 64; i++) {
-//        fprintf(out, "%d", ENCRYPTED[i]);
-//    }
-//    fclose(out);
-//}
-//
-//void Decryption(long int plain[])
-//{
-//    out = fopen("decrypted.txt", "ab+");
-//    for (int i = 0; i < 64; i++) {
-//        initialPermutation(i, plain[i]);
-//    }
-//
-//    for (int i = 0; i < 32; i++) {
-//        LEFT[0][i] = IPtext[i];
-//    }
-//
-//    for (int i = 32; i < 64; i++) {
-//        RIGHT[0][i – 32] = IPtext[i];
-//    }
-//
-//    for (int k = 1; k < 17; k++)
-//    {
-//        cipher(k, 1);
-//
-//        for (int i = 0; i < 32; i++) {
-//            LEFT[k][i] = RIGHT[k – 1][i];
-//        }
-//    }
-//
-//    for (int i = 0; i < 64; i++)
-//    {
-//        if (i < 32) {
-//            CIPHER[i] = RIGHT[16][i];
-//        }
-//        else {
-//            CIPHER[i] = LEFT[16][i – 32];
-//        }
-//        finalPermutation(i, CIPHER[i]);
-//    }
-//
-//    for (int i = 0; i < 64; i++) {
-//        fprintf(out, "%d", ENCRYPTED[i]);
-//    }
-//
-//    fclose(out);
-//}
-//
-//void convertToBits(int ch[])
-//{
-//    int value = 0;
-//    for (int i = 7; i >= 0; i--) {
-//        value += (int)pow(2, i) * ch[7 – i];
-//    }
-//    fprintf(out, "%c", value);
-//}
-//
-//int bittochar()
-//{
-//    out = fopen("result.txt", "ab+");
-//    for (int i = 0; i < 64; i = i + 8) {
-//        convertToBits(&ENCRYPTED[i]);
-//    }
-//    fclose(out);
-//}
-//
-//void key56to48(int round, int pos, int text)
-//{
-//    int i;
-//    for (i = 0; i < 56; i++)
-//    {
-//        if (PC2[i] == pos + 1) {
-//            break;
-//        }
-//    }
-//    key48bit[round][i] = text;
-//}
-//
-//int key64to56(int pos, int text)
-//{
-//    int i;
-//    for (i = 0; i < 56; i++)
-//    {
-//        if (PC1[i] == pos + 1) {
-//            break;
-//        }
-//    }
-//    key56bit[i] = text;
-//}
-//
-//void key64to48(unsigned int key[])
-//{
-//    int k, backup[17][2];
-//    int CD[17][56];
-//    int C[17][28], D[17][28];
-//
-//    for (int i = 0; i < 64; i++) {
-//        key64to56(i, key[i]);
-//    }
-//
-//    for (int i = 0; i < 56; i++)
-//    {
-//        if (i < 28) {
-//            C[0][i] = key56bit[i];
-//        }
-//        else {
-//            D[0][i – 28] = key56bit[i];
-//        }
-//    }
-//
-//    for (int x = 1; x < 17; x++)
-//    {
-//        int shift = SHIFTS[x – 1];
-//
-//        for (int i = 0; i < shift; i++) {
-//            backup[x - 1][i] = C[x – 1][i];
-//        }
-//
-//        for (int i = 0; i < (28 – shift); i++) {
-//            C[x][i] = C[x – 1][i + shift];
-//        }
-//
-//        k = 0;
-//        for (int i = 28 – shift; i < 28; i++) {
-//            C[x][i] = backup[x – 1][k++];
-//        }
-//
-//        for (int i = 0; i < shift; i++) {
-//            backup[x - 1][i] = D[x – 1][i];
-//        }
-//
-//        for (int i = 0; i < (28 – shift); i++) {
-//            D[x][i] = D[x – 1][i + shift];
-//        }
-//
-//        k = 0;
-//        for (int i = 28 – shift; i < 28; i++) {
-//            D[x][i] = backup[x – 1][k++];
-//        }
-//    }
-//
-//    for (int j = 0; j < 17; j++)
-//    {
-//        for (int i = 0; i < 28; i++) {
-//            CD[j][i] = C[j][i];
-//        }
-//
-//        for (int i = 28; i < 56; i++) {
-//            CD[j][i] = D[j][i – 28];
-//        }
-//    }
-//
-//    for (int j = 1; j < 17; j++)
-//    {
-//        for (int i = 0; i < 56; i++) {
-//            key56to48(j, i, CD[j][i]);
-//        }
-//    }
-//}
-//
-//void decrypt(long int n)
-//{
-//    FILE* in = fopen("cipher.txt", "rb");
-//    long int plain[n * 64];
-//    int i = -1;
-//    char ch;
-//
-//    while (!feof(in))
-//    {
-//        ch = getc(in);
-//        plain[++i] = ch – 48;
-//    }
-//
-//    for (int i = 0; i < n; i++)
-//    {
-//        Decryption(plain + i * 64);
-//        bittochar();
-//    }
-//
-//    fclose(in);
-//}
-//
-//void encrypt(long int n)
-//{
-//
-//    long int plain[n * 64];
-//    int i = -1;
-//    char ch;
-//
-//    while (!feof(in))
-//    {
-//        ch = getc(in);
-//        plain[++i] = ch – 48;
-//    }
-//
-//    for (int i = 0; i < n; i++) {
-//        Encryption(plain + 64 * i);
-//    }
-//
-//    fclose(in);
-//}
-//
-//void create16Keys()
-//{
-//    FILE* pt = fopen("key.txt", "rb");
-//    unsigned int key[64];
-//    int i = 0, ch;
-//
-//    while (!feof(pt))
-//    {
-//        ch = getc(pt);
-//        key[i++] = ch – 48;
-//    }
-//
-//    key64to48(key);
-//    fclose(pt);
-//}
-//
-//long int findFileSize()
-//{
-//    FILE* inp = fopen("input.txt", "rb");
-//    long int size;
-//
-//    if (fseek(inp, 0L, SEEK_END)) {
-//        perror("fseek() failed");
-//    }
-//    // size will contain number of chars in the input file.
-//    else {
-//        size = ftell(inp);
-//    }
-//    fclose(inp);
-//
-//    return size;
-//}
+﻿//używam MSB
 
-//int main()
-//{
-//    // destroy contents of these files (from previous runs, if any)
-//    out = fopen("result.txt", "wb+");
-//    fclose(out);
-//
-//    out = fopen("decrypted.txt", "wb+");
-//    fclose(out);
-//
-//    out = fopen("cipher.txt", "wb+");
-//    fclose(out);
-//
-//    create16Keys();
-//
-//    long int n = findFileSize() / 8;
-//    convertCharToBit(n);
-//
-//    encrypt(n);
-//    decrypt(n);
-//
-//    return 0;
-//}
+#include "cuda_runtime.h"
+#include "device_launch_parameters.h"
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <ctype.h>
+#include <math.h>
+#include <time.h>
+#include <cuda.h>
+
+#define MIK_WARP_PER_SM 4
+#define MIK_SM_NM 28
+#define THREADS_IN_WARP 32
+
+__shared__ int IP[] =
+{
+    58, 50, 42, 34, 26, 18, 10, 2,
+    60, 52, 44, 36, 28, 20, 12, 4,
+    62, 54, 46, 38, 30, 22, 14, 6,
+    64, 56, 48, 40, 32, 24, 16, 8,
+    57, 49, 41, 33, 25, 17,  9, 1,
+    59, 51, 43, 35, 27, 19, 11, 3,
+    61, 53, 45, 37, 29, 21, 13, 5,
+    63, 55, 47, 39, 31, 23, 15, 7
+};
+
+__shared__ int E[] =
+{
+    32,  1,  2,  3,  4,  5,
+    4,  5,  6,  7,  8,  9,
+    8,  9, 10, 11, 12, 13,
+    12, 13, 14, 15, 16, 17,
+    16, 17, 18, 19, 20, 21,
+    20, 21, 22, 23, 24, 25,
+    24, 25, 26, 27, 28, 29,
+    28, 29, 30, 31, 32,  1
+};
+
+__shared__ int P[] =
+{
+    16,  7, 20, 21,
+    29, 12, 28, 17,
+    1, 15, 23, 26,
+    5, 18, 31, 10,
+    2,  8, 24, 14,
+    32, 27,  3,  9,
+    19, 13, 30,  6,
+    22, 11,  4, 25
+};
+
+__shared__ int FP[] =
+{
+    40, 8, 48, 16, 56, 24, 64, 32,
+    39, 7, 47, 15, 55, 23, 63, 31,
+    38, 6, 46, 14, 54, 22, 62, 30,
+    37, 5, 45, 13, 53, 21, 61, 29,
+    36, 4, 44, 12, 52, 20, 60, 28,
+    35, 3, 43, 11, 51, 19, 59, 27,
+    34, 2, 42, 10, 50, 18, 58, 26,
+    33, 1, 41,  9, 49, 17, 57, 25
+};
+
+__shared__ int S1[4][16] =
+{
+        14,  4, 13,  1,  2, 15, 11,  8,  3, 10,  6, 12,  5,  9,  0,  7,
+        0, 15,  7,  4, 14,  2, 13,  1, 10,  6, 12, 11,  9,  5,  3,  8,
+        4,  1, 14,  8, 13,  6,  2, 11, 15, 12,  9,  7,  3, 10,  5,  0,
+        15, 12,  8,  2,  4,  9,  1,  7,  5, 11,  3, 14, 10,  0,  6, 13
+};
+
+__shared__ int S2[4][16] =
+{
+    15,  1,  8, 14,  6, 11,  3,  4,  9,  7,  2, 13, 12,  0,  5, 10,
+    3, 13,  4,  7, 15,  2,  8, 14, 12,  0,  1, 10,  6,  9, 11,  5,
+    0, 14,  7, 11, 10,  4, 13,  1,  5,  8, 12,  6,  9,  3,  2, 15,
+    13,  8, 10,  1,  3, 15,  4,  2, 11,  6,  7, 12,  0,  5, 14,  9
+};
+
+__shared__ int S3[4][16] =
+{
+    10,  0,  9, 14,  6,  3, 15,  5,  1, 13, 12,  7, 11,  4,  2,  8,
+    13,  7,  0,  9,  3,  4,  6, 10,  2,  8,  5, 14, 12, 11, 15,  1,
+    13,  6,  4,  9,  8, 15,  3,  0, 11,  1,  2, 12,  5, 10, 14,  7,
+    1, 10, 13,  0,  6,  9,  8,  7,  4, 15, 14,  3, 11,  5,  2, 12
+};
+
+__shared__ int S4[4][16] =
+{
+    7, 13, 14,  3,  0,  6,  9, 10,  1,  2,  8,  5, 11, 12,  4, 15,
+    13,  8, 11,  5,  6, 15,  0,  3,  4,  7,  2, 12,  1, 10, 14,  9,
+    10,  6,  9,  0, 12, 11,  7, 13, 15,  1,  3, 14,  5,  2,  8,  4,
+    3, 15,  0,  6, 10,  1, 13,  8,  9,  4,  5, 11, 12,  7,  2, 14
+};
+
+__shared__ int S5[4][16] =
+{
+    2, 12,  4,  1,  7, 10, 11,  6,  8,  5,  3, 15, 13,  0, 14,  9,
+    14, 11,  2, 12,  4,  7, 13,  1,  5,  0, 15, 10,  3,  9,  8,  6,
+    4,  2,  1, 11, 10, 13,  7,  8, 15,  9, 12,  5,  6,  3,  0, 14,
+    11,  8, 12,  7,  1, 14,  2, 13,  6, 15,  0,  9, 10,  4,  5,  3
+};
+
+__shared__ int S6[4][16] =
+{
+    12,  1, 10, 15,  9,  2,  6,  8,  0, 13,  3,  4, 14,  7,  5, 11,
+    10, 15,  4,  2,  7, 12,  9,  5,  6,  1, 13, 14,  0, 11,  3,  8,
+    9, 14, 15,  5,  2,  8, 12,  3,  7,  0,  4, 10,  1, 13, 11,  6,
+    4,  3,  2, 12,  9,  5, 15, 10, 11, 14,  1,  7,  6,  0,  8, 13
+};
+
+__shared__ int S7[4][16] =
+{
+    4, 11,  2, 14, 15,  0,  8, 13,  3, 12,  9,  7,  5, 10,  6,  1,
+    13,  0, 11,  7,  4,  9,  1, 10, 14,  3,  5, 12,  2, 15,  8,  6,
+    1,  4, 11, 13, 12,  3,  7, 14, 10, 15,  6,  8,  0,  5,  9,  2,
+    6, 11, 13,  8,  1,  4, 10,  7,  9,  5,  0, 15, 14,  2,  3, 12
+};
+
+__shared__ int S8[4][16] =
+{
+    13,  2,  8,  4,  6, 15, 11,  1, 10,  9,  3, 14,  5,  0, 12,  7,
+    1, 15, 13,  8, 10,  3,  7,  4, 12,  5,  6, 11,  0, 14,  9,  2,
+    7, 11,  4,  1,  9, 12, 14,  2,  0,  6, 10, 13, 15,  3,  5,  8,
+    2,  1, 14,  7,  4, 10,  8, 13, 15, 12,  9,  0,  3,  5,  6, 11
+};
+
+__shared__ int* s_boxes[4][16] = { *S1, *S2, *S3, *S4, *S5, *S6, *S7, *S8};
+
+__shared__ int PC1[] =
+{
+    57, 49, 41, 33, 25, 17,  9,
+    1, 58, 50, 42, 34, 26, 18,
+    10,  2, 59, 51, 43, 35, 27,
+    19, 11,  3, 60, 52, 44, 36,
+    63, 55, 47, 39, 31, 23, 15,
+    7, 62, 54, 46, 38, 30, 22,
+    14,  6, 61, 53, 45, 37, 29,
+    21, 13,  5, 28, 20, 12,  4
+};
+
+__shared__ int PC2[] =
+{
+    14, 17, 11, 24,  1,  5,
+    3, 28, 15,  6, 21, 10,
+    23, 19, 12,  4, 26,  8,
+    16,  7, 27, 20, 13,  2,
+    41, 52, 31, 37, 47, 55,
+    30, 40, 51, 45, 33, 48,
+    44, 49, 39, 56, 34, 53,
+    46, 42, 50, 36, 29, 32
+};
+
+__shared__ int SHIFTS[] = { 1, 1, 2, 2, 2, 2, 2, 2, 1, 2, 2, 2, 2, 2, 2, 1 };
+
+//MSB
+unsigned char bits[] = { 128,64,32,16,8,4,2,1};
+
+
+unsigned char key56_permuted[56];
+
+
+/// <summary>
+/// usuwa bity parzystości z klucza oraz wykonuje odpowiednie przestawienie bitów
+/// </summary>
+/// <param name="key">64-bitowy klucz rozbity na pojedyńcze bity w wektorze unsigned char</param>
+/// <returns>unsigned char[56], produkt potrzebny do dalszego ustalenie klucza dla danego cyklu</returns>
+__device__ unsigned char* key_to_56(unsigned char key[64]) {
+    int shift = 0;
+    unsigned char key56[56];
+
+    for (int i = 0; i <= 56; i++) {
+        if ((i + 1) % 8 == 0) {
+            shift++;
+            continue;
+        }
+        key56[i] = key[i + shift];
+    }
+    unsigned char key56_permuted[56];
+    for (int i = 0; i < 56; i++) {
+        key56_permuted[i] = key56[PC1[i]];
+    }
+    return key56_permuted;
+}
+
+/// <summary>
+/// przesuwa połówki klucza o odpowiednią ilość bitów
+/// </summary>
+/// <param name="key56"> wynik funkcji key_to_56</param>
+/// <param name="cicle">numer cyklu</param>
+/// <returns>przesunięty klucz 56</returns>
+__device__ unsigned char* key_shift(unsigned char* key56_permuted, int cicle) {
+    unsigned char key56_shifted[56];
+    switch (SHIFTS[cicle]) {
+    case 1:
+        unsigned int tmp = key56_permuted[0];
+        unsigned int tmp2 = key56_permuted[28];
+        for (int i = 1; i < 27; i++) {
+            key56_shifted[i - 1] = key56_permuted[i];
+            key56_shifted[i + 27] = key56_permuted[i + 28];
+        }
+        key56_shifted[27] = tmp;
+        key56_shifted[55] = tmp2;
+        break;
+    case 2:
+        unsigned int tmp = key56_permuted[0];
+        unsigned int tmp2 = key56_permuted[1];
+        unsigned int tmp3 = key56_permuted[28];
+        unsigned int tmp4 = key56_permuted[29];
+        for (int i = 2; i < 26; i++) {
+            key56_shifted[i - 2] = key56_permuted[i];
+            key56_shifted[i + 25] = key56_permuted[i + 30];
+        }
+        key56_shifted[26] = tmp;
+        key56_shifted[27] = tmp2;
+        key56_shifted[54] = tmp3;
+        key56_shifted[55] = tmp4;
+        break;
+    }
+    return key56_shifted;
+}
+
+/// <summary>
+/// permutacja pc2 zmniejszająca długość klucza do 48 bitów;
+/// </summary>
+/// <param name="key">wynik funkcji key_shift</param>
+/// <returns>klucz w postaci wektora unsigned char [6] bity połączone potrzebny do funkcji feistela dla opowiedniej iteracji</returns>
+__device__ unsigned char* key_to_48(unsigned char key[56]) {
+    unsigned char key_48[48];
+    for (int i = 0; i < 48; i++) {
+        key_48[i] = key[PC2[i]];
+    }
+    unsigned char key_final[6];
+    for (int i = 0; i < 48; i++) {
+        int target_byte = (int)i / 8;
+        int target_bit = i % 8;
+        key_final[target_byte] |= (key_48[i] << (8 - target_bit));
+    }
+    return key_final;
+}
+
+/// <summary>
+/// początkowa permutacja na wiadomości
+/// </summary>
+/// <param name="plain">niezaszywrowana wiadomość</param>
+/// <returns>wiadomość do zaszywrowania z poprzestawianymi bitami</returns>
+__device__ unsigned char* initial_permutation(unsigned char plain[8]) {
+    unsigned char plain_permuted[8];
+    for (int i = 0; i < 64; i++) {
+        int target_byte = (int)(i / 8);
+        int target_bit = i % 8;
+        int source_byte = (int)(IP[i] / 8);
+        int source_bit = IP[i] % 8;
+        plain_permuted[target_byte] |= (plain[source_byte] & bits[source_bit]) >> (target_bit - source_bit);
+    }
+    return plain_permuted;
+}
+
+/// <summary>
+/// funkcja feistela, albo przynajmniej jej część
+/// </summary>
+/// <param name="key">klucz 48 bitowy, wynik funkcji key_to_48</param>
+/// <param name="text">prawa połowa wiadomości</param>
+/// <returns>wynik funkcji feistela</returns>
+__device__ unsigned char* feistel(unsigned char* key, unsigned char* text) {
+    // permutacja rozszerzająca
+    unsigned char right_extended[6];
+    for (int i = 0; i < 48; i++) {
+        int target_byte = (int)(i / 8);
+        int target_bit = i % 8;
+        int source_byte = (int)(E[i] / 8);
+        int source_bit = E[i] % 8;
+        // sprawdzić czy przesunięcie jest potrzebne
+        right_extended[target_byte] |= (text[source_byte] & bits[source_bit]) >> (target_bit - source_bit);
+    }
+    // xor prawej części z kluczem
+    unsigned char right_xored[6];
+    for (int i = 0; i < 6; i++) {
+        right_xored[i] = right_extended[i] ^ key[i];
+    }
+    // s-blox
+    // tak wiem że zapewne da się to zrobić lepiej
+    unsigned char right_s_box[4];
+    for (int i = 0; i < 2; i++) {
+        int y1 = ((right_xored[i*3+0] & bits[0]) >> 6) | ((right_xored[i * 3 + 0] & bits[5]) >> 2);
+        int y2 = (right_xored[i * 3 + 0] & bits[6]) | ((right_xored[i * 3 + 1] & bits[3]) >> 4);
+        int y3 = ((right_xored[i * 3 + 1] & bits[4]) >> 2) | ((right_xored[i * 3 + 2] & bits[1]) >> 6);
+        int y4 = ((right_xored[i * 3 + 2] & bits[2]) >> 4) | (right_xored[i * 3 + 2] & bits[7]);
+        int x1 = ((bits[1] | bits[2] | bits[3] | bits[4]) & right_xored[i * 3 + 0]) >> 2;
+        int x2 = ((right_xored[i * 3 + 0] & bits[7]) << 3) | (right_xored[i * 3 + 1] & (bits[0] | bits[1] | bits[2])) >> 5;
+        int x3 = ((right_xored[i * 3 + 1] & (bits[5] | bits[6] | bits[7])) << 1) | ((right_xored[i * 3 + 2] & bits[0]) >> 7);
+        int x4 = (right_xored[i * 3 + 2] &(bits[3] | bits[4] | bits[5] | bits[6])) >> 1;
+        right_s_box[i * 2 + 0] = (s_boxes[i *4 + 0][y1][x1] << 4) | (s_boxes[i * 4 + 1][y2][x2]);
+        right_s_box[i * 2 + 0] = (s_boxes[i * 4 + 2][y3][x3] << 4) | (s_boxes[i * 4 + 3][y4][x4]);
+    }
+    //permutacja P
+    unsigned char right_final[4];
+    for (int i = 0; i < 32; i++) {
+        int target_byte = (int)(i / 8);
+        int target_bit = i % 8;
+        int source_byte = (int)(P[i] / 8);
+        int source_bit = P[i] % 8;
+        right_final[target_byte] |= (right_s_box[source_byte] & bits[source_bit]) >> (target_bit - source_bit);  
+    }
+    return right_final;
+}
+
+/// <summary>
+/// szyfrowanie DES
+/// </summary>
+/// <param name="key">64-bitowy klucz rozbity na pojedyncze bity w wektorze unsigned char[64] </param>
+/// <param name="text">64- bitowa wiadomość do zaszywrowania</param>
+/// <returns>zaszyfrowana wiadomośc unsigned char[8]</returns>
+__global__ unsigned char* DESCipher(unsigned char key[64], unsigned char text[8]) {
+    //przygotowania do cyklicznej części
+    unsigned char* plain_permuted = initial_permutation(text);
+    unsigned char* key_56 = key_to_56(key);
+    unsigned char left[4] = { text[0] ,text[1] ,text[2] ,text[3]};
+    unsigned char right[4] = { text[4] ,text[5] ,text[6] ,text[7]};
+    //część cykliczna
+    for (int i = 0; i < 16; i++) {
+        // w sumie to to jest funkcja feistela
+        key_56 = key_shift(key_56,i);
+        unsigned char* key_48 = key_to_48(key_56);
+        unsigned char* feistel_r = feistel(key_48, right); 
+        unsigned char l_xor_f[4];
+        // xor r_next i left
+        for (int i = 0; i < 4; i++) {
+            l_xor_f[i] = left[i] ^ feistel_r[i];
+        }
+        // lewa połowa danych staje się nową prawą połową, natomiast poprzednia prawa połowa staje się nową lewą połową
+        for (int i = 0; i < 4; i++) {
+            left[i] = right[i];
+            right[i] = l_xor_f[i];
+        }
+    }
+    // połączenie lewaprawa
+    unsigned char po_feistelu[8] = { left[0] ,left[1] ,left[2] ,left[3], right[0] ,right[1] ,right[2] ,right[3] };
+    // ostatnia permutacja
+    unsigned char finale[8];
+    for (int i = 0; i < 64; i++) {
+        int target_byte = (int)(i / 8);
+        int target_bit = i % 8;
+        int source_byte = (int)(FP[i] / 8);
+        int source_bit = FP[i] % 8;
+        finale[target_byte] |= (po_feistelu[source_byte] & bits[source_bit]) >> (target_bit - source_bit);
+    }
+    return finale;
+}
