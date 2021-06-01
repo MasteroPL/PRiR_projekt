@@ -18,22 +18,15 @@ int main() {
 		printf("\n");
 	}*/
 
-	rainbow_table_t* t = RainbowTable_allocate(8, 8, 20);
-
-	printf("\n------------\n");
+	//rainbow_table_t* t = RainbowTable_allocate(8, 8, 20);
+	rainbow_table_t* t = RainbowTable_allocate(8, 16, 1000000);
 
 	for (int i = 0; i < 20; i++) {
-		printf("%p\n", t->nodes[i].key);
-		printf("%p\n", t->nodes[i].encoded_password);
 
 		t->nodes[i].key[0] = (char)(65 + i);
 		t->nodes[i].encoded_password[0] = (char)(97 + i);
 		t->nodes[i].key[7] = '\0';
 		t->nodes[i].encoded_password[7] = '\0';
-
-		printf("%p\n", t->nodes[i].key);
-		printf("%p\n", t->nodes[i].encoded_password);
-		printf("\n------------\n");
 
 		for (int j = 0; j < 6; j++) {
 			t->nodes[i].key[1 + j] = (char)(48 + j);

@@ -130,9 +130,6 @@ rainbow_table_t* RainbowTable_allocate(short key_size, short encoded_password_si
 
 		result->nodes[i].key = (char*)&(tmp_data_ref[chunk_index][tmp_i * (key_size + encoded_password_size)]);
 		result->nodes[i].encoded_password = (char*)&(tmp_data_ref[chunk_index][tmp_i * (key_size + encoded_password_size) + key_size]);
-
-		printf("%p\n", result->nodes[i].key);
-		printf("%p\n", result->nodes[i].encoded_password);
 	}
 
 	return result;
