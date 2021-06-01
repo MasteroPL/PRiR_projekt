@@ -82,7 +82,11 @@
     <CudaCompile Include="main.cu" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="rainbow_table.h" />
     <ClInclude Include="indexer.cuh" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="rainbow_table.cu" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
