@@ -38,3 +38,10 @@ void RainbowTable_free(rainbow_table_t* self);
 /// <param name="filename">Nazwa pliku do wypisania</param>
 /// <returns>0 - zapis udany, 1 - b³¹d otwarcia pliku, 2 - b³¹d zapisu</returns>
 int RainbowTable_write_to_file(rainbow_table_t* self, const char* filename);
+
+/// <summary>
+/// Wczytuje tablicê têczow¹ z pliku
+/// </summary>
+/// <param name="filename">Nazwa pliku do wczytania</param>
+/// <returns>WskaŸnik do wczytanego obiektu lub NULL, jeœli wyczytywanie siê nie powiedzie</returns>
+rainbow_table_t* RainbowTable_read_from_file(const char* filename);
