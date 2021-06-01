@@ -172,3 +172,49 @@ int RainbowTable_write_to_file(rainbow_table_t* self, const char* filename) {
 	fclose(f);
 	return 0;
 }
+
+
+rainbow_table_t* RainbowTable_read_from_file(const char* filename) {
+	FILE* f = fopen(filename, "rb");
+
+	// Czy plik otwarty
+	if (f == NULL) {
+		return NULL;
+	}
+
+	char meta_data[8];
+	
+	fread(meta_data, 1, 8, f);
+	int* num_of_entries = (int*)&(meta_data[0]);
+	short* key_size = (short*)&(meta_data[4]);
+	short* password_size = (short*)&(meta_data[6]);
+
+	rainbow_table_t* t = RainbowTable_allocate(*key_size, *password_size, *num_of_entries);
+
+	if (t == NULL) {
+		// Nie mo¿na zarezerwowaæ pamiêci
+		fclose(f);
+		return NULL;
+	}
+
+	rainbow_table_node_t tmp_node;
+	for (int i = 0; i < *num_of_entries; i++) {
+		tmp_node = t->nodes[i];
+
+		// Pamiêæ zosta³a ju¿ zaalokowana
+		
+		if (fread(tmp_node.key, 1, t->key_size, f) < 0) {
+			// Nieprawid³owy plik
+			fclose(f);
+			return NULL;
+		}
+		if (fread(tmp_node.encoded_password, 1, t->encoded_password_size, f) < 0) {
+			// Nieprawid³owy plik
+			fclose(f);
+			return NULL;
+		}
+	}
+
+	fclose(f);
+	return t;
+}
