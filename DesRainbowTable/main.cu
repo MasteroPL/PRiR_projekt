@@ -13,13 +13,9 @@
 
 int main() {
 
-<<<<<<< HEAD
+
 	rainbow_table_t* t = RainbowTable_allocate(8, 16, 1000000);
-=======
-	//rainbow_table_t* t = RainbowTable_allocate(8, 8, 20);
-	rainbow_table_t* t = RainbowTable_read_from_file("test.txt");
-	//rainbow_table_t* t = RainbowTable_allocate(8, 16, 1000000);
->>>>>>> 4c5e5e467afe7f5e1ca9dbd85de7f64176a17f82
+
 
 	/*for (int i = 0; i < 20; i++) {
 
@@ -77,12 +73,6 @@ int main() {
 	for (int i = 0; i < 20; i++) {
 		printf("%i: %s | %s\n", i, t->nodes[i].key, t->nodes[i].encoded_password);
 	}
-
-<<<<<<< HEAD
-
-=======
-	RainbowTable_write_to_file(t, "test.txt");
->>>>>>> 4c5e5e467afe7f5e1ca9dbd85de7f64176a17f82
 
 	RainbowTable_free(t);
 

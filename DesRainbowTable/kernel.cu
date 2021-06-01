@@ -165,8 +165,7 @@ __device__ unsigned char bits[] = { 128,64,32,16,8,4,2,1};
 /// <returns>unsigned char[56], produkt potrzebny do dalszego ustalenie klucza dla danego cyklu</returns>
 __device__ unsigned char* key_to_56(unsigned char key[64]) {
     int shift = 0;
-    unsigned char* key56;
-    cudaMalloc(&key56, sizeof(unsigned char) * 56);
+    unsigned char* key56 = (unsigned char*)malloc(sizeof(unsigned char) * 56);
  
     for (int i = 0; i <= 56; i++) {
         if ((i + 1) % 8 == 0) {
@@ -175,11 +174,11 @@ __device__ unsigned char* key_to_56(unsigned char key[64]) {
         }
         key56[i] = key[i + shift];
     }
-    unsigned char key56_permuted[56];
+    unsigned char* key56_permuted = (unsigned char*)malloc(sizeof(unsigned char) * 56);
     for (int i = 0; i < 56; i++) {
         key56_permuted[i] = key56[PC1[i]];
     }
-    cudaFree(key56);
+    free(key56);
     return key56_permuted;
 }
 
@@ -190,7 +189,7 @@ __device__ unsigned char* key_to_56(unsigned char key[64]) {
 /// <param name="cicle">numer cyklu</param>
 /// <returns>przesunięty klucz 56</returns>
 __device__ unsigned char* key_shift(unsigned char* key56_permuted, int cicle) {
-    unsigned char key56_shifted[56];
+    unsigned char* key56_shifted = (unsigned char*)malloc(sizeof(unsigned char) * 56);
     unsigned int tmp;
     unsigned int tmp2;
     switch (SHIFTS[cicle]) {
@@ -232,8 +231,7 @@ __device__ unsigned char* key_to_48(unsigned char key[56]) {
     for (int i = 0; i < 48; i++) {
         key_48[i] = key[PC2[i]];
     }
-    unsigned char* key_final;
-    cudaMalloc(&key_final, sizeof(unsigned char) * 6);
+    unsigned char* key_final = (unsigned char*)malloc(sizeof(unsigned char) * 6);
 
     for (int i = 0; i < 48; i++) {
         int target_byte = (int)i / 8;
@@ -249,8 +247,7 @@ __device__ unsigned char* key_to_48(unsigned char key[56]) {
 /// <param name="plain">niezaszywrowana wiadomość</param>
 /// <returns>wiadomość do zaszywrowania z poprzestawianymi bitami</returns>
 __device__ unsigned char* initial_permutation(unsigned char plain[8]) {
-    unsigned char* plain_permuted;
-    cudaMalloc(&plain_permuted, sizeof(unsigned char) * 8);
+    unsigned char* plain_permuted = (unsigned char*)malloc(sizeof(unsigned char) * 8);
     for (int i = 0; i < 64; i++) {
         int target_byte = (int)(i / 8);
         int target_bit = i % 8;
@@ -269,8 +266,7 @@ __device__ unsigned char* initial_permutation(unsigned char plain[8]) {
 /// <returns>wynik funkcji feistela</returns>
 __device__ unsigned char* feistel(unsigned char* key, unsigned char* text) {
     // permutacja rozszerzająca
-    unsigned char* right_extended;
-    cudaMalloc(&right_extended, sizeof(unsigned char) * 6);
+    unsigned char* right_extended = (unsigned char*)malloc(sizeof(unsigned char) * 6);
     for (int i = 0; i < 48; i++) {
         int target_byte = (int)(i / 8);
         int target_bit = i % 8;
@@ -297,11 +293,10 @@ __device__ unsigned char* feistel(unsigned char* key, unsigned char* text) {
         int x3 = ((right_xored[i * 3 + 1] & (bits[5] | bits[6] | bits[7])) << 1) | ((right_xored[i * 3 + 2] & bits[0]) >> 7);
         int x4 = (right_xored[i * 3 + 2] &(bits[3] | bits[4] | bits[5] | bits[6])) >> 1;
         right_s_box[i * 2 + 0] = (s_boxes[i *4 + 0][y1][x1] << 4) | (s_boxes[i * 4 + 1][y2][x2]);
-        right_s_box[i * 2 + 0] = (s_boxes[i * 4 + 2][y3][x3] << 4) | (s_boxes[i * 4 + 3][y4][x4]);
+        right_s_box[i * 2 + 1] = (s_boxes[i * 4 + 2][y3][x3] << 4) | (s_boxes[i * 4 + 3][y4][x4]);
     }
     //permutacja P
-    unsigned char* right_final;
-    cudaMalloc(&right_final, sizeof(unsigned char) * 4);
+    unsigned char* right_final = (unsigned char*)malloc(sizeof(unsigned char) * 4);
     for (int i = 0; i < 32; i++) {
         int target_byte = (int)(i / 8);
         int target_bit = i % 8;
@@ -352,4 +347,6 @@ __global__ void DESCipher(unsigned char key[64], unsigned char text[8], unsigned
         int source_bit = FP[i] % 8;
         finale[target_byte] |= (po_feistelu[source_byte] & bits[source_bit]) >> (target_bit - source_bit);
     }
+    free(plain_permuted);
+    free(key_56);
 }
