@@ -11,6 +11,8 @@
 #include "indexer.cuh"
 #include "kernel.h"
 
+
+
 int main() {
 
 
@@ -34,15 +36,14 @@ int main() {
 
 	// testowanie dla jednego watku
 	srand(time(NULL));
-	unsigned char key_host[64];
-	for (int i = 0; i < 64; i++) {
-		key_host[i] = rand() % 2;
-	}
-	unsigned char plain_host[] = { 'm','e','n','d','a','1','2','3' };
+	unsigned char key_host[64] = {1,0,0,1,1,1,0,1,0,1,0,1,0,0,1,1,1,0,1,0,1,0, 1,0,0,1,1,1,0,1,0,1,0, 1,0,0,1,1,1,0,1,0,1,0, 1,0,0,1,1,1,0,1,0,1,0, 1,0,0,1,1,1,0,1,0} ;
+
+	unsigned char plain_host[] = { 'n','@',',','d','1','J','o','?' };
 	
 	unsigned char* encrypted_host = (unsigned char*)malloc(sizeof(unsigned char)*8);
 
-	//alokowanie do GPU
+	unsigned char* test;
+	cudaMalloc(&test, 8);
 	unsigned char* key;
 	cudaMalloc(&key, sizeof(unsigned char) * 64);
 	unsigned char* plain;
@@ -53,26 +54,22 @@ int main() {
 	cudaMemcpy(key, key_host, sizeof(unsigned char) * 64, cudaMemcpyHostToDevice);
 	cudaMemcpy(plain, plain_host, sizeof(unsigned char) * 8, cudaMemcpyHostToDevice);
 
-	printf("%s\n", plain);
+	//printf("%s\n", plain_host);
+	DESCipher<<<1,1>>>(key,plain,encrypted,test);
+
 	cudaMemcpy(encrypted_host, encrypted, sizeof(unsigned char) * 8, cudaMemcpyDeviceToHost);
-
-
-	DESCipher<<<1,1>>>(key,plain,encrypted);
 	cudaFree(key);
 	cudaFree(plain);
 	cudaFree(encrypted);
-	printf("%s\n", encrypted_host);
+	cudaFree(test);
+	//printf("%s\n", encrypted_host);
 
-	free(plain_host);
-	free(key_host);
+	for (int i = 0; i < 8; i++) {
+		printf("%d ",encrypted_host[i]);
+	}
+	printf("\n");
 	free(encrypted_host);
 
-
-
-
-	for (int i = 0; i < 20; i++) {
-		printf("%i: %s | %s\n", i, t->nodes[i].key, t->nodes[i].encoded_password);
-	}
 
 	RainbowTable_free(t);
 

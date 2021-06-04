@@ -1,11 +1,20 @@
 ﻿//używam MSB
 
+//-----------------------------------------------------------------------
+//                           IMPORTANT
+// nsight nie widzi zaalokowanych przez karte graficzną tabeli, ale można 
+// przekopiować do tabeli stworzonej przez cudaMalloc i wtedy pokazuje wartości
+//---------------------------------------------------------------------------
+
+
+
 #include "cuda_runtime.h"
 #include "device_launch_parameters.h"
 #include "kernel.h"
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <ctype.h>
 #include <math.h>
 #include <time.h>
@@ -15,7 +24,7 @@
 #define MIK_SM_NM 28
 #define THREADS_IN_WARP 32
 
-__device__ int IP[] =
+/*__device__ int IP[] =
 {
     58, 50, 42, 34, 26, 18, 10, 2,
     60, 52, 44, 36, 28, 20, 12, 4,
@@ -26,6 +35,9 @@ __device__ int IP[] =
     61, 53, 45, 37, 29, 21, 13, 5,
     63, 55, 47, 39, 31, 23, 15, 7
 };
+obecnie zbędne
+przerobiłem fragment matematycznie, jak się okazało jest w miarę regularne
+*/
 
 __device__ int E[] =
 {
@@ -63,71 +75,57 @@ __device__ int FP[] =
     33, 1, 41,  9, 49, 17, 57, 25
 };
 
-__device__ int S1[4][16] =
-{
+
+__device__ int s_boxes[8][4][16] = { 
+    {
         14,  4, 13,  1,  2, 15, 11,  8,  3, 10,  6, 12,  5,  9,  0,  7,
         0, 15,  7,  4, 14,  2, 13,  1, 10,  6, 12, 11,  9,  5,  3,  8,
         4,  1, 14,  8, 13,  6,  2, 11, 15, 12,  9,  7,  3, 10,  5,  0,
         15, 12,  8,  2,  4,  9,  1,  7,  5, 11,  3, 14, 10,  0,  6, 13
-};
-
-__device__ int S2[4][16] =
-{
-    15,  1,  8, 14,  6, 11,  3,  4,  9,  7,  2, 13, 12,  0,  5, 10,
-    3, 13,  4,  7, 15,  2,  8, 14, 12,  0,  1, 10,  6,  9, 11,  5,
-    0, 14,  7, 11, 10,  4, 13,  1,  5,  8, 12,  6,  9,  3,  2, 15,
-    13,  8, 10,  1,  3, 15,  4,  2, 11,  6,  7, 12,  0,  5, 14,  9
-};
-
-__device__ int S3[4][16] =
-{
-    10,  0,  9, 14,  6,  3, 15,  5,  1, 13, 12,  7, 11,  4,  2,  8,
-    13,  7,  0,  9,  3,  4,  6, 10,  2,  8,  5, 14, 12, 11, 15,  1,
-    13,  6,  4,  9,  8, 15,  3,  0, 11,  1,  2, 12,  5, 10, 14,  7,
-    1, 10, 13,  0,  6,  9,  8,  7,  4, 15, 14,  3, 11,  5,  2, 12
-};
-
-__device__ int S4[4][16] =
-{
-    7, 13, 14,  3,  0,  6,  9, 10,  1,  2,  8,  5, 11, 12,  4, 15,
-    13,  8, 11,  5,  6, 15,  0,  3,  4,  7,  2, 12,  1, 10, 14,  9,
-    10,  6,  9,  0, 12, 11,  7, 13, 15,  1,  3, 14,  5,  2,  8,  4,
-    3, 15,  0,  6, 10,  1, 13,  8,  9,  4,  5, 11, 12,  7,  2, 14
-};
-
-__device__ int S5[4][16] =
-{
-    2, 12,  4,  1,  7, 10, 11,  6,  8,  5,  3, 15, 13,  0, 14,  9,
-    14, 11,  2, 12,  4,  7, 13,  1,  5,  0, 15, 10,  3,  9,  8,  6,
-    4,  2,  1, 11, 10, 13,  7,  8, 15,  9, 12,  5,  6,  3,  0, 14,
-    11,  8, 12,  7,  1, 14,  2, 13,  6, 15,  0,  9, 10,  4,  5,  3
-};
-
-__device__ int S6[4][16] =
-{
-    12,  1, 10, 15,  9,  2,  6,  8,  0, 13,  3,  4, 14,  7,  5, 11,
-    10, 15,  4,  2,  7, 12,  9,  5,  6,  1, 13, 14,  0, 11,  3,  8,
-    9, 14, 15,  5,  2,  8, 12,  3,  7,  0,  4, 10,  1, 13, 11,  6,
-    4,  3,  2, 12,  9,  5, 15, 10, 11, 14,  1,  7,  6,  0,  8, 13
-};
-
-__device__ int S7[4][16] =
-{
-    4, 11,  2, 14, 15,  0,  8, 13,  3, 12,  9,  7,  5, 10,  6,  1,
-    13,  0, 11,  7,  4,  9,  1, 10, 14,  3,  5, 12,  2, 15,  8,  6,
-    1,  4, 11, 13, 12,  3,  7, 14, 10, 15,  6,  8,  0,  5,  9,  2,
-    6, 11, 13,  8,  1,  4, 10,  7,  9,  5,  0, 15, 14,  2,  3, 12
-};
-
-__device__ int S8[4][16] =
-{
-    13,  2,  8,  4,  6, 15, 11,  1, 10,  9,  3, 14,  5,  0, 12,  7,
-    1, 15, 13,  8, 10,  3,  7,  4, 12,  5,  6, 11,  0, 14,  9,  2,
-    7, 11,  4,  1,  9, 12, 14,  2,  0,  6, 10, 13, 15,  3,  5,  8,
-    2,  1, 14,  7,  4, 10,  8, 13, 15, 12,  9,  0,  3,  5,  6, 11
-};
-
-__device__ int* s_boxes[4][16] = { *S1, *S2, *S3, *S4, *S5, *S6, *S7, *S8};
+    },
+    {
+        15,  1,  8, 14,  6, 11,  3,  4,  9,  7,  2, 13, 12,  0,  5, 10,
+        3, 13,  4,  7, 15,  2,  8, 14, 12,  0,  1, 10,  6,  9, 11,  5,
+        0, 14,  7, 11, 10,  4, 13,  1,  5,  8, 12,  6,  9,  3,  2, 15,
+        13,  8, 10,  1,  3, 15,  4,  2, 11,  6,  7, 12,  0,  5, 14,  9
+    },
+    { 
+        10,  0,  9, 14,  6,  3, 15,  5,  1, 13, 12,  7, 11,  4,  2,  8,
+        13,  7,  0,  9,  3,  4,  6, 10,  2,  8,  5, 14, 12, 11, 15,  1,
+        13,  6,  4,  9,  8, 15,  3,  0, 11,  1,  2, 12,  5, 10, 14,  7,
+        1, 10, 13,  0,  6,  9,  8,  7,  4, 15, 14,  3, 11,  5,  2, 12
+    },
+    {
+        7, 13, 14,  3,  0,  6,  9, 10,  1,  2,  8,  5, 11, 12,  4, 15,
+        13,  8, 11,  5,  6, 15,  0,  3,  4,  7,  2, 12,  1, 10, 14,  9,
+        10,  6,  9,  0, 12, 11,  7, 13, 15,  1,  3, 14,  5,  2,  8,  4,
+        3, 15,  0,  6, 10,  1, 13,  8,  9,  4,  5, 11, 12,  7,  2, 14
+    },
+    {
+        2, 12,  4,  1,  7, 10, 11,  6,  8,  5,  3, 15, 13,  0, 14,  9,
+        14, 11,  2, 12,  4,  7, 13,  1,  5,  0, 15, 10,  3,  9,  8,  6,
+        4,  2,  1, 11, 10, 13,  7,  8, 15,  9, 12,  5,  6,  3,  0, 14,
+        11,  8, 12,  7,  1, 14,  2, 13,  6, 15,  0,  9, 10,  4,  5,  3
+    },
+    {
+        12,  1, 10, 15,  9,  2,  6,  8,  0, 13,  3,  4, 14,  7,  5, 11,
+        10, 15,  4,  2,  7, 12,  9,  5,  6,  1, 13, 14,  0, 11,  3,  8,
+        9, 14, 15,  5,  2,  8, 12,  3,  7,  0,  4, 10,  1, 13, 11,  6,
+        4,  3,  2, 12,  9,  5, 15, 10, 11, 14,  1,  7,  6,  0,  8, 13
+    },
+    {
+        4, 11,  2, 14, 15,  0,  8, 13,  3, 12,  9,  7,  5, 10,  6,  1,
+        13,  0, 11,  7,  4,  9,  1, 10, 14,  3,  5, 12,  2, 15,  8,  6,
+        1,  4, 11, 13, 12,  3,  7, 14, 10, 15,  6,  8,  0,  5,  9,  2,
+        6, 11, 13,  8,  1,  4, 10,  7,  9,  5,  0, 15, 14,  2,  3, 12
+    },
+    {
+        13,  2,  8,  4,  6, 15, 11,  1, 10,  9,  3, 14,  5,  0, 12,  7,
+        1, 15, 13,  8, 10,  3,  7,  4, 12,  5,  6, 11,  0, 14,  9,  2,
+        7, 11,  4,  1,  9, 12, 14,  2,  0,  6, 10, 13, 15,  3,  5,  8,
+        2,  1, 14,  7,  4, 10,  8, 13, 15, 12,  9,  0,  3,  5,  6, 11
+    }
+ };
 
 __device__ int PC1[] =
 {
@@ -158,28 +156,26 @@ __device__ int SHIFTS[] = { 1, 1, 2, 2, 2, 2, 2, 2, 1, 2, 2, 2, 2, 2, 2, 1 };
 //MSB
 __device__ unsigned char bits[] = { 128,64,32,16,8,4,2,1};
 
+__device__ int bitsIP[] = { 1,3,5,7,0,2,4,6 };
+
+// trzeba nad tym popracować
+
+
+// __device__ int s_boxes[8][4][16] = { *S1, *S2, *S3, *S4, *S5, *S6, *S7, *S8 };
+// 
+// done na 100% initial_permutation i key_to_56, naprawione permutacje w wszytskich pozostałych funkcjacj
+
 /// <summary>
 /// usuwa bity parzystości z klucza oraz wykonuje odpowiednie przestawienie bitów
 /// </summary>
 /// <param name="key">64-bitowy klucz rozbity na pojedyńcze bity w wektorze unsigned char</param>
 /// <returns>unsigned char[56], produkt potrzebny do dalszego ustalenie klucza dla danego cyklu</returns>
 __device__ unsigned char* key_to_56(unsigned char key[64]) {
-    int shift = 0;
     unsigned char* key56 = (unsigned char*)malloc(sizeof(unsigned char) * 56);
- 
-    for (int i = 0; i <= 56; i++) {
-        if ((i + 1) % 8 == 0) {
-            shift++;
-            continue;
-        }
-        key56[i] = key[i + shift];
-    }
-    unsigned char* key56_permuted = (unsigned char*)malloc(sizeof(unsigned char) * 56);
     for (int i = 0; i < 56; i++) {
-        key56_permuted[i] = key56[PC1[i]];
+        key56[i] = key[PC1[i]-1];
     }
-    free(key56);
-    return key56_permuted;
+    return key56;
 }
 
 /// <summary>
@@ -192,6 +188,11 @@ __device__ unsigned char* key_shift(unsigned char* key56_permuted, int cicle) {
     unsigned char* key56_shifted = (unsigned char*)malloc(sizeof(unsigned char) * 56);
     unsigned int tmp;
     unsigned int tmp2;
+
+    for (int i = 0; i < 56; i++) {
+        key56_shifted[i] = 0;
+    }
+
     switch (SHIFTS[cicle]) {
     case 1:
         tmp = key56_permuted[0];
@@ -232,6 +233,9 @@ __device__ unsigned char* key_to_48(unsigned char key[56]) {
         key_48[i] = key[PC2[i]];
     }
     unsigned char* key_final = (unsigned char*)malloc(sizeof(unsigned char) * 6);
+    for (int i = 0; i < 6; i++) {
+        key_final[i] = 0;
+    }
 
     for (int i = 0; i < 48; i++) {
         int target_byte = (int)i / 8;
@@ -247,13 +251,22 @@ __device__ unsigned char* key_to_48(unsigned char key[56]) {
 /// <param name="plain">niezaszywrowana wiadomość</param>
 /// <returns>wiadomość do zaszywrowania z poprzestawianymi bitami</returns>
 __device__ unsigned char* initial_permutation(unsigned char plain[8]) {
-    unsigned char* plain_permuted = (unsigned char*)malloc(sizeof(unsigned char) * 8);
-    for (int i = 0; i < 64; i++) {
-        int target_byte = (int)(i / 8);
-        int target_bit = i % 8;
-        int source_byte = (int)(IP[i] / 8);
-        int source_bit = IP[i] % 8;
-        plain_permuted[target_byte] |= (plain[source_byte] & bits[source_bit]) >> (target_bit - source_bit);
+   
+    unsigned char* plain_permuted = (unsigned char*) malloc(8);
+    for (int i = 0; i < 8; i++) {
+        plain_permuted[i] = 0;
+    }
+    for (int i = 0; i < 8; i++) {
+        for (int j = 7; j >= 0; j--) {
+            int bit_shift = 7 - j - bitsIP[i];
+            if (bit_shift >= 0){
+                plain_permuted[i] |= ((plain[j] & bits[bitsIP[i]]) >> bit_shift);
+            }
+            else {
+                plain_permuted[i] |= ((plain[j] & bits[bitsIP[i]]) << (-bit_shift));
+            }
+
+        }
     }
     return plain_permuted;
 }
@@ -264,16 +277,25 @@ __device__ unsigned char* initial_permutation(unsigned char plain[8]) {
 /// <param name="key">klucz 48 bitowy, wynik funkcji key_to_48</param>
 /// <param name="text">prawa połowa wiadomości</param>
 /// <returns>wynik funkcji feistela</returns>
-__device__ unsigned char* feistel(unsigned char* key, unsigned char* text) {
+__device__ unsigned char* feistel(unsigned char* key, unsigned char* text, unsigned char* test) {
     // permutacja rozszerzająca
-    unsigned char* right_extended = (unsigned char*)malloc(sizeof(unsigned char) * 6);
+    unsigned char right_extended[6];
+    for (int i = 0; i < 6; i++) {
+        right_extended[i] = 0;
+    }
     for (int i = 0; i < 48; i++) {
         int target_byte = (int)(i / 8);
         int target_bit = i % 8;
-        int source_byte = (int)(E[i] / 8);
-        int source_bit = E[i] % 8;
-        // sprawdzić czy przesunięcie jest potrzebne , na 99% jest potrzebne  >> (target_bit - source_bit)
-        right_extended[target_byte] |= (text[source_byte] & bits[source_bit]) >> (target_bit - source_bit);
+        int source_byte = (int)((E[i] -1) / 8);
+        int source_bit = (E[i] -1) % 8;
+        if ((target_bit - source_bit) >= 0) {
+            right_extended[target_byte] |= ((text[source_byte] & bits[source_bit]) >> (target_bit - source_bit));
+        }
+        else
+        {
+            right_extended[target_byte] |= ((text[source_byte] & bits[source_bit]) << (source_bit - target_bit));
+        }
+
     }
     // xor prawej części z kluczem
     unsigned char right_xored[6];
@@ -283,26 +305,41 @@ __device__ unsigned char* feistel(unsigned char* key, unsigned char* text) {
     // s-blox
     // tak wiem że zapewne da się to zrobić lepiej
     unsigned char right_s_box[4];
+    for (int i = 0; i < 4; i++) {
+        right_s_box[i] = 0;
+    }
     for (int i = 0; i < 2; i++) {
         int y1 = ((right_xored[i*3+0] & bits[0]) >> 6) | ((right_xored[i * 3 + 0] & bits[5]) >> 2);
         int y2 = (right_xored[i * 3 + 0] & bits[6]) | ((right_xored[i * 3 + 1] & bits[3]) >> 4);
         int y3 = ((right_xored[i * 3 + 1] & bits[4]) >> 2) | ((right_xored[i * 3 + 2] & bits[1]) >> 6);
         int y4 = ((right_xored[i * 3 + 2] & bits[2]) >> 4) | (right_xored[i * 3 + 2] & bits[7]);
-        int x1 = ((bits[1] | bits[2] | bits[3] | bits[4]) & right_xored[i * 3 + 0]) >> 2;
-        int x2 = ((right_xored[i * 3 + 0] & bits[7]) << 3) | (right_xored[i * 3 + 1] & (bits[0] | bits[1] | bits[2])) >> 5;
+        int x1 = ((bits[1] | bits[2] | bits[3] | bits[4]) & right_xored[i * 3 + 0]) >> 3;
+        int x2 = ((right_xored[i * 3 + 0] & bits[7]) << 3) | ((right_xored[i * 3 + 1] & (bits[0] | bits[1] | bits[2])) >> 5);
         int x3 = ((right_xored[i * 3 + 1] & (bits[5] | bits[6] | bits[7])) << 1) | ((right_xored[i * 3 + 2] & bits[0]) >> 7);
         int x4 = (right_xored[i * 3 + 2] &(bits[3] | bits[4] | bits[5] | bits[6])) >> 1;
-        right_s_box[i * 2 + 0] = (s_boxes[i *4 + 0][y1][x1] << 4) | (s_boxes[i * 4 + 1][y2][x2]);
-        right_s_box[i * 2 + 1] = (s_boxes[i * 4 + 2][y3][x3] << 4) | (s_boxes[i * 4 + 3][y4][x4]);
+        right_s_box[i * 2 + 0] = ((s_boxes[i * 4 + 0][y1][x1] << 4) | (s_boxes[i * 4 + 1][y2][x2]));
+        right_s_box[i * 2 + 1] = ((s_boxes[i * 4 + 2][y3][x3] << 4) | (s_boxes[i * 4 + 3][y4][x4]));
+    }
+    for (int i = 0; i < 8;i++) {
+        test[i] = right_s_box[i];
     }
     //permutacja P
     unsigned char* right_final = (unsigned char*)malloc(sizeof(unsigned char) * 4);
+    for (int i = 0; i < 4; i++) {
+        right_final[i] = 0;
+    }
     for (int i = 0; i < 32; i++) {
         int target_byte = (int)(i / 8);
         int target_bit = i % 8;
-        int source_byte = (int)(P[i] / 8);
-        int source_bit = P[i] % 8;
-        right_final[target_byte] |= (right_s_box[source_byte] & bits[source_bit]) >> (target_bit - source_bit);  
+        int source_byte = (int)((P[i] - 1) / 8);
+        int source_bit = (P[i] - 1) % 8;
+        if ((target_bit - source_bit) >= 0) {
+            right_final[target_byte] |= ((right_s_box[source_byte] & bits[source_bit]) >> (target_bit - source_bit));
+        }
+        else {
+            right_final[target_byte] |= ((right_s_box[source_byte] & bits[source_bit]) << (source_bit - target_bit));
+        }
+        
     }
     return right_final;
 }
@@ -314,18 +351,27 @@ __device__ unsigned char* feistel(unsigned char* key, unsigned char* text) {
 /// <param name="text">in: 64- bitowa wiadomość do zaszywrowania</param>
 /// <param name="finale">out: wynik szyfrowania</param>
 /// <returns></returns>
-__global__ void DESCipher(unsigned char key[64], unsigned char text[8], unsigned char finale[8]) {
+__global__ void DESCipher(unsigned char key[64], unsigned char text[8], unsigned char finale[8], unsigned char* test) {
     //przygotowania do cyklicznej części
+    finale[0] = 0;
+    finale[1] = 1;
+    finale[2] = 2;
+    finale[3] = 3;
+    finale[4] = 4;
+    finale[5] = 5;
+    finale[6] = 6;
+    finale[7] = 7;
+
     unsigned char* plain_permuted = initial_permutation(text);
     unsigned char* key_56 = key_to_56(key);
-    unsigned char left[4] = { text[0] ,text[1] ,text[2] ,text[3]};
-    unsigned char right[4] = { text[4] ,text[5] ,text[6] ,text[7]};
+    unsigned char left[4] = { plain_permuted[0] ,plain_permuted[1] ,plain_permuted[2] ,plain_permuted[3]};
+    unsigned char right[4] = { plain_permuted[4] ,plain_permuted[5], plain_permuted[6] ,plain_permuted[7]};
     //część cykliczna
     for (int i = 0; i < 16; i++) {
         // w sumie to to jest funkcja feistela
         key_56 = key_shift(key_56,i);
         unsigned char* key_48 = key_to_48(key_56);
-        unsigned char* feistel_r = feistel(key_48, right); 
+        unsigned char* feistel_r = feistel(key_48, right, test);
         unsigned char l_xor_f[4];
         // xor r_next i left
         for (int i = 0; i < 4; i++) {
@@ -343,9 +389,15 @@ __global__ void DESCipher(unsigned char key[64], unsigned char text[8], unsigned
     for (int i = 0; i < 64; i++) {
         int target_byte = (int)(i / 8);
         int target_bit = i % 8;
-        int source_byte = (int)(FP[i] / 8);
-        int source_bit = FP[i] % 8;
-        finale[target_byte] |= (po_feistelu[source_byte] & bits[source_bit]) >> (target_bit - source_bit);
+        int source_byte = (int)((FP[i]-1) / 8);
+        int source_bit = (FP[i]-1) % 8;
+        if ((target_bit - source_bit) >= 0) {
+            finale[target_byte] |= (po_feistelu[source_byte] & bits[source_bit]) >> (target_bit - source_bit);
+        }
+        else {
+            finale[target_byte] |= (po_feistelu[source_byte] & bits[source_bit]) << (source_bit - target_bit);
+        }
+
     }
     free(plain_permuted);
     free(key_56);
