@@ -77,7 +77,6 @@ __device__ int FP[] =
     33, 1, 41,  9, 49, 17, 57, 25
 };
 
-
 __device__ int s_boxes[8][4][16] = { 
     {
         14,  4, 13,  1,  2, 15, 11,  8,  3, 10,  6, 12,  5,  9,  0,  7,
@@ -160,12 +159,6 @@ __device__ unsigned char bits[] = { 128,64,32,16,8,4,2,1};
 
 __device__ int bitsIP[] = { 1,3,5,7,0,2,4,6 };
 
-// trzeba nad tym popracować
-
-
-// __device__ int s_boxes[8][4][16] = { *S1, *S2, *S3, *S4, *S5, *S6, *S7, *S8 };
-// 
-// done na 100% initial_permutation i key_to_56, naprawione permutacje w wszytskich pozostałych funkcjacj
 
 /// <summary>
 /// usuwa bity parzystości z klucza oraz wykonuje odpowiednie przestawienie bitów
@@ -229,20 +222,27 @@ __device__ unsigned char* key_shift(unsigned char* key56_permuted, int cicle) {
 /// </summary>
 /// <param name="key">wynik funkcji key_shift</param>
 /// <returns>klucz w postaci wektora unsigned char [6] bity połączone potrzebny do funkcji feistela dla opowiedniej iteracji</returns>
-__device__ unsigned char* key_to_48(unsigned char key[56]) {
+__device__ unsigned char* key_to_48(unsigned char key[56], unsigned char* test) {
+    for (int i = 0; i < 8; i++) {
+        test[i] = key[i];
+    }
     unsigned char key_48[48];
     for (int i = 0; i < 48; i++) {
         key_48[i] = key[PC2[i] - 1];
     }
+
     unsigned char* key_final = (unsigned char*)malloc(sizeof(unsigned char) * 6);
-    for (int i = 0; i < 6; i++) {
-        key_final[i] = 0;
+    if (key_final){
+        for (int i = 0; i < 6; i++) {
+            key_final[i] = 0;
+        }
     }
+
 
     for (int i = 0; i < 48; i++) {
         int target_byte = (int)i / 8;
         int target_bit = i % 8;
-        key_final[target_byte] |= (key_48[i] << (7 - target_bit));
+        key_final[target_byte] = key_final[target_byte] | (key_48[i] << (7 - target_bit));
     }
     return key_final;
 }
@@ -351,15 +351,6 @@ __device__ unsigned char* feistel(unsigned char* key, unsigned char* text, unsig
 /// <param name="finale">out: wynik szyfrowania</param>
 /// <returns></returns>
 __device__ void DESCipher(unsigned char key[64], unsigned char text[8], unsigned char finale[8], unsigned char* test) {
-    //przygotowania do cyklicznej części
-    finale[0] = 0;
-    finale[1] = 1;
-    finale[2] = 2;
-    finale[3] = 3;
-    finale[4] = 4;
-    finale[5] = 5;
-    finale[6] = 6;
-    finale[7] = 7;
 
     unsigned char* plain_permuted = initial_permutation(text);
     unsigned char* key_56 = key_to_56(key);
@@ -369,7 +360,7 @@ __device__ void DESCipher(unsigned char key[64], unsigned char text[8], unsigned
     for (int i = 0; i < 16; i++) {
         // w sumie to to jest funkcja feistela
         key_56 = key_shift(key_56,i);
-        unsigned char* key_48 = key_to_48(key_56);
+        unsigned char* key_48 = key_to_48(key_56,test);
         unsigned char* feistel_r = feistel(key_48, right, test);
         unsigned char l_xor_f[4];
         // xor r_next i left
@@ -381,10 +372,14 @@ __device__ void DESCipher(unsigned char key[64], unsigned char text[8], unsigned
             left[i] = right[i];
             right[i] = l_xor_f[i];
         }
+        free(key_48);
+        free(feistel_r);
+
     }
     // połączenie lewaprawa
     unsigned char po_feistelu[8] = { left[0] ,left[1] ,left[2] ,left[3], right[0] ,right[1] ,right[2] ,right[3] };
-    // ostatnia permutacja
+
+
     for (int i = 0; i < 64; i++) {
         int target_byte = (int)(i / 8);
         int target_bit = i % 8;
@@ -398,6 +393,11 @@ __device__ void DESCipher(unsigned char key[64], unsigned char text[8], unsigned
         }
 
     }
+
+    if (blockIdx.x == 1888) {
+        int cos = 1; //dla zatrzymania
+    }
+    
     free(plain_permuted);
     free(key_56);
 }
@@ -420,7 +420,7 @@ __global__ void GenerateRainbowTable(
     unsigned char key_bytes[8];
     unsigned char key_bits[64];
     unsigned char encoded[8];
-    unsigned char text[8] = { '1', '2', '3', '4', '5', '6', '7', '8' }; // debug
+    unsigned char text[8] = { '1', '2', '3', '4', '5', '6', '7', '9' }; // debug
 
     int key_index = (rainbow_table_index) * RAINBOW_TABLE_SIZE + blockIdx.x;
 
