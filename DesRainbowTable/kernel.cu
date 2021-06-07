@@ -20,6 +20,8 @@
 #include <time.h>
 #include <cuda.h>
 
+#include "rainbow_table.h"
+
 #define MIK_WARP_PER_SM 4
 #define MIK_SM_NM 28
 #define THREADS_IN_WARP 32
@@ -230,7 +232,7 @@ __device__ unsigned char* key_shift(unsigned char* key56_permuted, int cicle) {
 __device__ unsigned char* key_to_48(unsigned char key[56]) {
     unsigned char key_48[48];
     for (int i = 0; i < 48; i++) {
-        key_48[i] = key[PC2[i]];
+        key_48[i] = key[PC2[i] - 1];
     }
     unsigned char* key_final = (unsigned char*)malloc(sizeof(unsigned char) * 6);
     for (int i = 0; i < 6; i++) {
@@ -240,7 +242,7 @@ __device__ unsigned char* key_to_48(unsigned char key[56]) {
     for (int i = 0; i < 48; i++) {
         int target_byte = (int)i / 8;
         int target_bit = i % 8;
-        key_final[target_byte] |= (key_48[i] << (8 - target_bit));
+        key_final[target_byte] |= (key_48[i] << (7 - target_bit));
     }
     return key_final;
 }
@@ -320,9 +322,6 @@ __device__ unsigned char* feistel(unsigned char* key, unsigned char* text, unsig
         right_s_box[i * 2 + 0] = ((s_boxes[i * 4 + 0][y1][x1] << 4) | (s_boxes[i * 4 + 1][y2][x2]));
         right_s_box[i * 2 + 1] = ((s_boxes[i * 4 + 2][y3][x3] << 4) | (s_boxes[i * 4 + 3][y4][x4]));
     }
-    for (int i = 0; i < 8;i++) {
-        test[i] = right_s_box[i];
-    }
     //permutacja P
     unsigned char* right_final = (unsigned char*)malloc(sizeof(unsigned char) * 4);
     for (int i = 0; i < 4; i++) {
@@ -351,7 +350,7 @@ __device__ unsigned char* feistel(unsigned char* key, unsigned char* text, unsig
 /// <param name="text">in: 64- bitowa wiadomość do zaszywrowania</param>
 /// <param name="finale">out: wynik szyfrowania</param>
 /// <returns></returns>
-__global__ void DESCipher(unsigned char key[64], unsigned char text[8], unsigned char finale[8], unsigned char* test) {
+__device__ void DESCipher(unsigned char key[64], unsigned char text[8], unsigned char finale[8], unsigned char* test) {
     //przygotowania do cyklicznej części
     finale[0] = 0;
     finale[1] = 1;
@@ -401,4 +400,58 @@ __global__ void DESCipher(unsigned char key[64], unsigned char text[8], unsigned
     }
     free(plain_permuted);
     free(key_56);
+}
+
+/// <summary>
+/// Równoległe generowanie tablic tęczowych dla wybranego zakresu
+/// </summary>
+/// <param name="srainbow_table_index">Pierwszy indeks dla generowania tablic tęczowych (kolejna od zera tablica do wygenerowania)</param>
+__global__ void GenerateRainbowTable(
+    unsigned char** origins,
+    unsigned char** keys_pointers,
+    unsigned char** encoded_passwords_pointers,
+    int key_size,
+    int encoded_password_size,
+    char* plain_password,
+    int plain_password_length,
+    int rainbow_table_index,
+    unsigned char* test
+) {
+    unsigned char key_bytes[8];
+    unsigned char key_bits[64];
+    unsigned char encoded[8];
+    unsigned char text[8] = { '1', '2', '3', '4', '5', '6', '7', '8' }; // debug
+
+    int key_index = (rainbow_table_index) * RAINBOW_TABLE_SIZE + threadIdx.x;
+
+    for (short i = 0; i < 8; i++) {
+        key_bytes[i] = key_index % 256;
+        keys_pointers[threadIdx.x][i] = key_bytes[i];
+        key_index /= 256;
+    }
+
+    unsigned char cur_byte;
+    for (short i = 0; i < 8; i++) {
+        cur_byte = key_bytes[i];
+
+        for (short j = 0; j < 8; j++) {
+            key_bits[i * 8 + 7 - j] = cur_byte % 2;
+            cur_byte /= 2;
+        }
+    }
+
+    DESCipher(key_bits, text, encoded, test);
+    for (short i = 0; i < 8; i++) {
+        encoded_passwords_pointers[threadIdx.x][i] = encoded[i];
+    }
+    if (threadIdx.x == 3) {
+        encoded_passwords_pointers[3][0] = 'P';
+        encoded_passwords_pointers[3][1] = 'A';
+        encoded_passwords_pointers[3][2] = 'N';
+        encoded_passwords_pointers[3][3] = '_';
+        encoded_passwords_pointers[3][4] = 'C';
+        encoded_passwords_pointers[3][5] = 'H';
+        encoded_passwords_pointers[3][6] = 'U';
+        encoded_passwords_pointers[3][7] = 'J';
+    }
 }

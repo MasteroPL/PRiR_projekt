@@ -1,4 +1,6 @@
 #include "rainbow_table.h"
+#include "cuda_runtime.h"
+#include "device_launch_parameters.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -16,7 +18,7 @@ rainbow_table_t* RainbowTable_allocate(short key_size, short encoded_password_si
 		return NULL;
 	}
 	int per_chunk = num_of_entries;
-	int entry_size = sizeof(char) * key_size + sizeof(char) * encoded_password_size;
+	int entry_size = sizeof(unsigned char) * key_size + sizeof(unsigned char) * encoded_password_size;
 
 	result->key_size = key_size;
 	result->encoded_password_size = encoded_password_size;
@@ -47,7 +49,7 @@ rainbow_table_t* RainbowTable_allocate(short key_size, short encoded_password_si
 		}
 		int tmp_entries = num_of_entries;
 
-		result->_nodes_data_ref = (char**)malloc(sizeof(char*) * num_of_chunks);
+		result->_nodes_data_ref = (unsigned char**)malloc(sizeof(char*) * num_of_chunks);
 		result->_num_of_refs = num_of_chunks;
 
 		if (result->_nodes_data_ref == NULL) {
@@ -65,13 +67,13 @@ rainbow_table_t* RainbowTable_allocate(short key_size, short encoded_password_si
 
 		for (int i = 0; i < num_of_chunks; i++) {
 			if (tmp_entries > per_chunk) {
-				result->_nodes_data_ref[i] = (char*)malloc(
+				result->_nodes_data_ref[i] = (unsigned char*)malloc(
 					entry_size * per_chunk
 				);
 				result->_ref_sizes[i] = per_chunk;
 			}
 			else {
-				result->_nodes_data_ref[i] = (char*)malloc(
+				result->_nodes_data_ref[i] = (unsigned char*)malloc(
 					entry_size * tmp_entries
 				);
 				result->_ref_sizes[i] = per_chunk;
@@ -92,7 +94,7 @@ rainbow_table_t* RainbowTable_allocate(short key_size, short encoded_password_si
 	}
 	// Wszystko mo¿na zarezerwowaæ w jednym miejscu
 	else {
-		result->_nodes_data_ref = (char**)malloc(sizeof(char*));
+		result->_nodes_data_ref = (unsigned char**)malloc(sizeof(unsigned char*));
 		if (result->_nodes_data_ref == NULL) {
 			free(result);
 			return NULL;
@@ -103,7 +105,7 @@ rainbow_table_t* RainbowTable_allocate(short key_size, short encoded_password_si
 			free(result);
 			return NULL;
 		}
-		result->_nodes_data_ref[0] = (char*)malloc(cur_malloc_size);
+		result->_nodes_data_ref[0] = (unsigned char*)malloc(cur_malloc_size);
 		if (result->_nodes_data_ref[0] == NULL) {
 			free(result->_nodes_data_ref);
 			free(result->_ref_sizes);
@@ -114,7 +116,7 @@ rainbow_table_t* RainbowTable_allocate(short key_size, short encoded_password_si
 		result->_ref_sizes[0] = num_of_entries;
 	}
 
-	char** tmp_data_ref = result->_nodes_data_ref;
+	unsigned char** tmp_data_ref = result->_nodes_data_ref;
 
 	result->nodes[0].key = &(tmp_data_ref[0][0]);
 	result->nodes[0].encoded_password = &(tmp_data_ref[0][key_size]);
@@ -128,8 +130,8 @@ rainbow_table_t* RainbowTable_allocate(short key_size, short encoded_password_si
 			tmp_i = 0;
 		}
 
-		result->nodes[i].key = (char*)&(tmp_data_ref[chunk_index][tmp_i * (key_size + encoded_password_size)]);
-		result->nodes[i].encoded_password = (char*)&(tmp_data_ref[chunk_index][tmp_i * (key_size + encoded_password_size) + key_size]);
+		result->nodes[i].key = (unsigned char*)&(tmp_data_ref[chunk_index][tmp_i * (key_size + encoded_password_size)]);
+		result->nodes[i].encoded_password = (unsigned char*)&(tmp_data_ref[chunk_index][tmp_i * (key_size + encoded_password_size) + key_size]);
 	}
 
 	return result;
@@ -166,7 +168,7 @@ int RainbowTable_write_to_file(rainbow_table_t* self, const char* filename) {
 	fwrite(meta_data, 1, 8, f);
 
 	for (int i = 0; i < self->_num_of_refs; i++) {
-		fwrite(self->_nodes_data_ref[i], sizeof(char) * self->key_size + sizeof(char) * self->encoded_password_size, self->_ref_sizes[i], f);
+		fwrite(self->_nodes_data_ref[i], sizeof(unsigned char) * self->key_size + sizeof(unsigned char) * self->encoded_password_size, self->_ref_sizes[i], f);
 	}
 
 	fclose(f);
@@ -217,4 +219,75 @@ rainbow_table_t* RainbowTable_read_from_file(const char* filename) {
 
 	fclose(f);
 	return t;
+}
+
+
+void RainbowTable_cuda_allocate(rainbow_table_t* ref_rainbow_table, unsigned char*** keys_pointers, unsigned char*** encoded_passwords_pointers, unsigned char*** origins_refs) {
+	rainbow_table_t* ref = ref_rainbow_table;
+	int entry_size = sizeof(unsigned char) * ref->key_size + sizeof(unsigned char) * ref->encoded_password_size;
+
+	cudaMalloc(keys_pointers, sizeof(unsigned char*) * ref->nodes_size);
+	cudaMalloc(encoded_passwords_pointers, sizeof(unsigned char*) * ref->nodes_size);
+	cudaMalloc(origins_refs, sizeof(unsigned char*) * ref->_num_of_refs);
+
+	unsigned char** h_keys_pointers = (unsigned char**)malloc(sizeof(unsigned char*) * ref->nodes_size);
+	unsigned char** h_encoded_passwords_pointers = (unsigned char**)malloc(sizeof(unsigned char*) * ref->nodes_size);
+	unsigned char** h_origins_refs = (unsigned char**)malloc(sizeof(unsigned char*) * ref->_num_of_refs);
+	for (int i = 0; i < ref->_num_of_refs; i++) {
+		cudaMalloc(&((h_origins_refs)[i]), entry_size * ref->_ref_sizes[i]);
+	}
+	cudaMemcpy(*origins_refs, h_origins_refs, sizeof(unsigned char*) * ref->_num_of_refs, cudaMemcpyHostToDevice);
+	cudaMemcpy(h_origins_refs, *origins_refs, sizeof(unsigned char*) * ref->_num_of_refs, cudaMemcpyDeviceToHost);
+
+	int cur_size = ref->_ref_sizes[0];
+	int cur_tmp = 0;
+	int cur_ref = 0;
+	for (int i = 0; i < ref->nodes_size; i++, cur_tmp++) {
+		if (cur_tmp == cur_size) {
+			cur_tmp = 0;
+			cur_ref++;
+			cur_size = ref->_ref_sizes[cur_ref];
+		}
+
+		int a = cur_tmp * entry_size;
+		int b = (cur_tmp * entry_size) + ref->key_size;
+		(h_keys_pointers)[i] = &(h_origins_refs)[cur_ref][cur_tmp * entry_size];
+		(h_encoded_passwords_pointers)[i] = &(h_origins_refs)[cur_ref][(cur_tmp * entry_size) + ref->key_size];
+	}
+
+	cudaMemcpy(*keys_pointers, h_keys_pointers, sizeof(unsigned char**) * ref->nodes_size, cudaMemcpyHostToDevice);
+	cudaMemcpy(*encoded_passwords_pointers, h_encoded_passwords_pointers, sizeof(unsigned char**) * ref->nodes_size, cudaMemcpyHostToDevice);
+
+	free(h_keys_pointers);
+	free(h_encoded_passwords_pointers);
+	free(h_origins_refs);
+}
+
+void RainbowTable_cuda_copy_results_to_host(rainbow_table_t* ref_rainbow_table, unsigned char** origins_refs) {
+	rainbow_table_t* ref = ref_rainbow_table;
+	int entry_size = sizeof(unsigned char) * ref->key_size + sizeof(unsigned char) * ref->encoded_password_size;
+
+	unsigned char** h_origins_refs = (unsigned char** )malloc(sizeof(unsigned char*) * ref->_num_of_refs);
+	cudaMemcpy(h_origins_refs, origins_refs, sizeof(unsigned char*) * ref->_num_of_refs, cudaMemcpyDeviceToHost);
+
+	for (int i = 0; i < ref->_num_of_refs; i++) {
+		cudaMemcpy(ref->_nodes_data_ref[i], h_origins_refs[i], entry_size * ref->_ref_sizes[i], cudaMemcpyDeviceToHost);
+	}
+
+	free(h_origins_refs);
+}
+
+void RainbowTable_cuda_free(rainbow_table_t* ref_rainbow_table, unsigned char** keys_pointers, unsigned char** encoded_passwords_pointers, unsigned char** origins_refs) {
+	rainbow_table_t* ref = ref_rainbow_table;
+
+	cudaFree(keys_pointers);
+	cudaFree(encoded_passwords_pointers);
+
+	unsigned char** h_origins_refs = (unsigned char**)malloc(sizeof(unsigned char*) * ref->_num_of_refs);
+	cudaMemcpy(h_origins_refs, origins_refs, sizeof(unsigned char*) * ref->_num_of_refs, cudaMemcpyDeviceToHost);
+
+	for (int i = 0; i < ref->_num_of_refs; i++) {
+		cudaFree(h_origins_refs[i]);
+	}
+	cudaFree(origins_refs);
 }
