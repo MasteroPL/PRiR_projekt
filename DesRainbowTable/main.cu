@@ -14,7 +14,7 @@
 
 int main() {
 
-	rainbow_table_t* t = RainbowTable_allocate(8, 16, 1890);
+	rainbow_table_t* t = RainbowTable_allocate(8, 16, 65535);
 
 	unsigned char key_bytes[8];
 	unsigned char key_bits[64];
@@ -33,7 +33,7 @@ int main() {
 	unsigned char** d_encoded_passwords_pointers;
 	unsigned char** d_origins;
 	RainbowTable_cuda_allocate(t, &d_keys_pointers, &d_encoded_passwords_pointers, &d_origins);
-	GenerateRainbowTable <<<1890, 1>>> (d_origins, d_keys_pointers, d_encoded_passwords_pointers, t->key_size, t->encoded_password_size, NULL, 8, 0, test);
+	GenerateRainbowTable <<<65535, 1>>> (d_origins, d_keys_pointers, d_encoded_passwords_pointers, t->key_size, t->encoded_password_size, NULL, 8, 0, test);
 	RainbowTable_cuda_copy_results_to_host(t, d_origins);
 	RainbowTable_cuda_free(t, d_keys_pointers, d_encoded_passwords_pointers, d_origins);
 

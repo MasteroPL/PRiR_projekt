@@ -179,25 +179,20 @@ __device__ unsigned char* key_to_56(unsigned char key[64]) {
 /// <param name="key56"> wynik funkcji key_to_56</param>
 /// <param name="cicle">numer cyklu</param>
 /// <returns>przesunięty klucz 56</returns>
-__device__ unsigned char* key_shift(unsigned char* key56_permuted, int cicle) {
-    unsigned char* key56_shifted = (unsigned char*)malloc(sizeof(unsigned char) * 56);
+__device__ void key_shift(unsigned char* key56_permuted, int cicle) {
     unsigned int tmp;
     unsigned int tmp2;
-
-    for (int i = 0; i < 56; i++) {
-        key56_shifted[i] = 0;
-    }
 
     switch (SHIFTS[cicle]) {
     case 1:
         tmp = key56_permuted[0];
         tmp2 = key56_permuted[28];
         for (int i = 1; i < 27; i++) {
-            key56_shifted[i - 1] = key56_permuted[i];
-            key56_shifted[i + 27] = key56_permuted[i + 28];
+            key56_permuted[i - 1] = key56_permuted[i];
+            key56_permuted[i + 27] = key56_permuted[i + 28];
         }
-        key56_shifted[27] = tmp;
-        key56_shifted[55] = tmp2;
+        key56_permuted[27] = tmp;
+        key56_permuted[55] = tmp2;
         break;
     case 2:
         tmp = key56_permuted[0];
@@ -205,16 +200,16 @@ __device__ unsigned char* key_shift(unsigned char* key56_permuted, int cicle) {
         unsigned int tmp3 = key56_permuted[28];
         unsigned int tmp4 = key56_permuted[29];
         for (int i = 2; i < 26; i++) {
-            key56_shifted[i - 2] = key56_permuted[i];
-            key56_shifted[i + 25] = key56_permuted[i + 30];
+            key56_permuted[i - 2] = key56_permuted[i];
+            key56_permuted[i + 25] = key56_permuted[i + 30];
         }
-        key56_shifted[26] = tmp;
-        key56_shifted[27] = tmp2;
-        key56_shifted[54] = tmp3;
-        key56_shifted[55] = tmp4;
+        key56_permuted[26] = tmp;
+        key56_permuted[27] = tmp2;
+        key56_permuted[54] = tmp3;
+        key56_permuted[55] = tmp4;
         break;
     }
-    return key56_shifted;
+    
 }
 
 /// <summary>
@@ -359,7 +354,7 @@ __device__ void DESCipher(unsigned char key[64], unsigned char text[8], unsigned
     //część cykliczna
     for (int i = 0; i < 16; i++) {
         // w sumie to to jest funkcja feistela
-        key_56 = key_shift(key_56,i);
+        key_shift(key_56,i);
         unsigned char* key_48 = key_to_48(key_56,test);
         unsigned char* feistel_r = feistel(key_48, right, test);
         unsigned char l_xor_f[4];
@@ -393,11 +388,6 @@ __device__ void DESCipher(unsigned char key[64], unsigned char text[8], unsigned
         }
 
     }
-
-    if (blockIdx.x == 1888) {
-        int cos = 1; //dla zatrzymania
-    }
-    
     free(plain_permuted);
     free(key_56);
 }
