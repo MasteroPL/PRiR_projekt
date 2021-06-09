@@ -29,7 +29,7 @@ __global__ void GenerateRainbowTable(
 	unsigned char** encoded_passwords_pointers,
 	int key_size,
 	int encoded_password_size,
-	char* plain_password,
+	unsigned char* plain_password,
 	int plain_password_length,
 	int start_rainbow_table_index,
 	unsigned char* test

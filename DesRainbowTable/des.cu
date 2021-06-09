@@ -435,12 +435,12 @@ __global__ void GenerateRainbowTable(
 	unsigned char** encoded_passwords_pointers,
 	int key_size,
 	int encoded_password_size,
-	char* plain_password,
+	unsigned char* plain_password,
 	int plain_password_length,
 	int rainbow_table_index,
 	unsigned char* test
 ) {
-	unsigned char plain_text[8];
+	/*unsigned char plain_text[8];
 	plain_text[0] = 1;
 	plain_text[1] = 35;
 	plain_text[2] = 69;
@@ -448,10 +448,10 @@ __global__ void GenerateRainbowTable(
 	plain_text[4] = 137;
 	plain_text[5] = 171;
 	plain_text[6] = 205;
-	plain_text[7] = 239;
+	plain_text[7] = 239;*/
 	int index = (blockIdx.x * 512) + threadIdx.x;
 	des_t* d = DES_init(8);
-	d->plain_text = plain_text;
+	d->plain_text = plain_password;
 
 	int key_index = (rainbow_table_index)*RAINBOW_TABLE_SIZE + (blockIdx.x * 512) + threadIdx.x;
 	
