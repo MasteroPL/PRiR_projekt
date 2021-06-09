@@ -50,6 +50,8 @@ int main(int argc, char** argv) {
 	unsigned char* test;
 	cudaMalloc(&test, 8);
 
+	clock_t begin = clock();
+
 	unsigned char* d_plain_text;
 	cudaMalloc(&d_plain_text, sizeof(unsigned char) * pass_len);
 	cudaMemcpy(d_plain_text, plain_password, sizeof(unsigned char) * pass_len, cudaMemcpyHostToDevice);
@@ -61,6 +63,10 @@ int main(int argc, char** argv) {
 	GenerateRainbowTable <<<2048,512>>> (d_origins, d_keys_pointers, d_encoded_passwords_pointers, t->key_size, t->encoded_password_size, d_plain_text, pass_len, 100, test);
 	RainbowTable_cuda_copy_results_to_host(t, d_origins);
 	RainbowTable_cuda_free(t, d_keys_pointers, d_encoded_passwords_pointers, d_origins);
+
+	clock_t end = clock();
+	double time_spent = (double)(end - begin) / CLOCKS_PER_SEC;
+	printf("Czas trwania: %lf\n", time_spent);
 
 	int tmp_index = rainbow_table_id;
 	for (int i = 19; i >= 0; i--) {
