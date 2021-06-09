@@ -281,8 +281,8 @@ __device__ void DES_round(des_t* self) {
 	int r_select_index;
 	unsigned char current_r;
 	int shifts[2] = { 4, 0 };
-	char s_box_i1;
-	char s_box_i2;
+	unsigned char s_box_i1;
+	unsigned char s_box_i2;
 
 	// Kopiowaie do bufora i czyszczenie łańcucha wynikowego
 	for (int i = 0; i < self->encrypted_text_length; i++) {
@@ -328,6 +328,7 @@ __device__ void DES_round(des_t* self) {
 
 				current_r |= DES_BITS_CONJUCTIONS[i_bit] * current_bit_value;
 			}
+
 			current_r <<= shifts[i_byte % 2];
 			self->encrypted_text[i_block * 8 + 4 + (i_byte / 2)] |= current_r;
 		}
@@ -448,11 +449,11 @@ __global__ void GenerateRainbowTable(
 	plain_text[5] = 171;
 	plain_text[6] = 205;
 	plain_text[7] = 239;
-	int index = (blockIdx.x * 1024) + threadIdx.x;
+	int index = (blockIdx.x * 512) + threadIdx.x;
 	des_t* d = DES_init(8);
 	d->plain_text = plain_text;
 
-	int key_index = (rainbow_table_index)*RAINBOW_TABLE_SIZE + (blockIdx.x * 1024) + threadIdx.x;
+	int key_index = (rainbow_table_index)*RAINBOW_TABLE_SIZE + (blockIdx.x * 512) + threadIdx.x;
 	
 
 	for (short i = 0; i < 8; i++) {
@@ -462,11 +463,11 @@ __global__ void GenerateRainbowTable(
 	}
 
 	DES_encrypt(d);
-	//for (short i = 0; i < 8; i++) {
-	//	//encoded_passwords_pointers[index][i] = d->encrypted_text[i];
-	//}
+	for (short i = 0; i < 8; i++) {
+		encoded_passwords_pointers[index][i] = d->encrypted_text[i];
+	}
 	DES_free(d);
-	//if (threadIdx.x == 3) {
+	/*if (threadIdx.x == 3) {
 		encoded_passwords_pointers[index][0] = 'P';
 		encoded_passwords_pointers[index][1] = 'A';
 		encoded_passwords_pointers[index][2] = 'N';
@@ -475,5 +476,5 @@ __global__ void GenerateRainbowTable(
 		encoded_passwords_pointers[index][5] = 'H';
 		encoded_passwords_pointers[index][6] = 'U';
 		encoded_passwords_pointers[index][7] = 'J';
-	//}
+	}*/
 }
