@@ -2,7 +2,7 @@
 #ifndef _RAINBOW_TABLE_H__
 #define _RAINBOW_TABLE_H__
 #define MAX_MALLOC_SIZE 16711568
-#define RAINBOW_TABLE_SIZE 1000000
+#define RAINBOW_TABLE_SIZE 1048576
 
 typedef struct RainbowTableNode {
 	unsigned char* key;

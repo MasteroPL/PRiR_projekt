@@ -249,6 +249,10 @@ void RainbowTable_cuda_allocate(rainbow_table_t* ref_rainbow_table, unsigned cha
 			cur_size = ref->_ref_sizes[cur_ref];
 		}
 
+		if (i == 1024) {
+			int c = 0;
+		}
+
 		int a = cur_tmp * entry_size;
 		int b = (cur_tmp * entry_size) + ref->key_size;
 		(h_keys_pointers)[i] = &(h_origins_refs)[cur_ref][cur_tmp * entry_size];

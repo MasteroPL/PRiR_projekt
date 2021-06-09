@@ -77,12 +77,12 @@
     </CudaCompile>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <CudaCompile Include="des.cu" />
     <CudaCompile Include="indexer.cu" />
-    <CudaCompile Include="kernel.cu" />
     <CudaCompile Include="main.cu" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="kernel.h" />
+    <ClInclude Include="des.cuh" />
     <ClInclude Include="rainbow_table.h" />
     <ClInclude Include="indexer.cuh" />
   </ItemGroup>

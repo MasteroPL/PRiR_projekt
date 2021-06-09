@@ -412,11 +412,12 @@ __global__ void GenerateRainbowTable(
     unsigned char encoded[8];
     unsigned char text[8] = { '1', '2', '3', '4', '5', '6', '7', '9' }; // debug
 
-    int key_index = (rainbow_table_index) * RAINBOW_TABLE_SIZE + blockIdx.x;
+    int key_index = (rainbow_table_index) * RAINBOW_TABLE_SIZE + (blockIdx.x * 1024) + threadIdx.x;
+    int index = (blockIdx.x * 1024) + threadIdx.x;
 
     for (short i = 0; i < 8; i++) {
         key_bytes[i] = key_index % 256;
-        keys_pointers[blockIdx.x][i] = key_bytes[i];
+        keys_pointers[index][i] = key_bytes[i];
         key_index /= 256;
     }
 
@@ -432,9 +433,9 @@ __global__ void GenerateRainbowTable(
 
     DESCipher(key_bits, text, encoded, test);
     for (short i = 0; i < 8; i++) {
-        encoded_passwords_pointers[blockIdx.x][i] = encoded[i];
+        encoded_passwords_pointers[index][i] = encoded[i];
     }
-    if (blockIdx.x == 3) {
+    /*if (blockIdx.x == 3) {
         encoded_passwords_pointers[blockIdx.x][0] = 'P';
         encoded_passwords_pointers[blockIdx.x][1] = 'A';
         encoded_passwords_pointers[blockIdx.x][2] = 'N';
@@ -443,5 +444,5 @@ __global__ void GenerateRainbowTable(
         encoded_passwords_pointers[blockIdx.x][5] = 'H';
         encoded_passwords_pointers[blockIdx.x][6] = 'U';
         encoded_passwords_pointers[blockIdx.x][7] = 'J';
-    }
+    }*/
 }
