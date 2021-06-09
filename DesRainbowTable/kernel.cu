@@ -159,20 +159,6 @@ __device__ unsigned char bits[] = { 128,64,32,16,8,4,2,1};
 
 __device__ int bitsIP[] = { 1,3,5,7,0,2,4,6 };
 
-
-/// <summary>
-/// usuwa bity parzystości z klucza oraz wykonuje odpowiednie przestawienie bitów
-/// </summary>
-/// <param name="key">64-bitowy klucz rozbity na pojedyńcze bity w wektorze unsigned char</param>
-/// <returns>unsigned char[56], produkt potrzebny do dalszego ustalenie klucza dla danego cyklu</returns>
-__device__ unsigned char* key_to_56(unsigned char key[64]) {
-    unsigned char* key56 = (unsigned char*)malloc(sizeof(unsigned char) * 56);
-    for (int i = 0; i < 56; i++) {
-        key56[i] = key[PC1[i]-1];
-    }
-    return key56;
-}
-
 /// <summary>
 /// przesuwa połówki klucza o odpowiednią ilość bitów
 /// </summary>
@@ -187,7 +173,7 @@ __device__ void key_shift(unsigned char* key56_permuted, int cicle) {
     case 1:
         tmp = key56_permuted[0];
         tmp2 = key56_permuted[28];
-        for (int i = 1; i < 27; i++) {
+        for (int i = 1; i < 28; i++) {
             key56_permuted[i - 1] = key56_permuted[i];
             key56_permuted[i + 27] = key56_permuted[i + 28];
         }
@@ -199,9 +185,9 @@ __device__ void key_shift(unsigned char* key56_permuted, int cicle) {
         tmp2 = key56_permuted[1];
         unsigned int tmp3 = key56_permuted[28];
         unsigned int tmp4 = key56_permuted[29];
-        for (int i = 2; i < 26; i++) {
+        for (int i = 2; i < 28; i++) {
             key56_permuted[i - 2] = key56_permuted[i];
-            key56_permuted[i + 25] = key56_permuted[i + 30];
+            key56_permuted[i + 26] = key56_permuted[i + 28];
         }
         key56_permuted[26] = tmp;
         key56_permuted[27] = tmp2;
@@ -209,18 +195,54 @@ __device__ void key_shift(unsigned char* key56_permuted, int cicle) {
         key56_permuted[55] = tmp4;
         break;
     }
-    
 }
+//powyżej nie napewno dobrze ale poprawione
+/// <summary>
+/// początkowa permutacja na wiadomości
+/// </summary>
+/// <param name="plain">niezaszywrowana wiadomość</param>
+/// <returns>wiadomość do zaszywrowania z poprzestawianymi bitami</returns>
+__device__ unsigned char* initial_permutation(unsigned char plain[8]) {
+
+    unsigned char* plain_permuted = (unsigned char*)malloc(8);
+    for (int i = 0; i < 8; i++) {
+        plain_permuted[i] = 0;
+    }
+    for (int i = 0; i < 8; i++) {
+        for (int j = 7; j >= 0; j--) {
+            int bit_shift = 7 - j - bitsIP[i];
+            if (bit_shift >= 0) {
+                plain_permuted[i] |= ((plain[j] & bits[bitsIP[i]]) >> bit_shift);
+            }
+            else {
+                plain_permuted[i] |= ((plain[j] & bits[bitsIP[i]]) << (-bit_shift));
+            }
+        }
+    }
+    return plain_permuted;
+}
+
+/// <summary>
+/// usuwa bity parzystości z klucza oraz wykonuje odpowiednie przestawienie bitów
+/// </summary>
+/// <param name="key">64-bitowy klucz rozbity na pojedyńcze bity w wektorze unsigned char</param>
+/// <returns>unsigned char[56], produkt potrzebny do dalszego ustalenie klucza dla danego cyklu</returns>
+__device__ unsigned char* key_to_56(unsigned char key[64]) {
+    unsigned char* key56 = (unsigned char*)malloc(sizeof(unsigned char) * 56);
+    for (int i = 0; i < 56; i++) {
+        key56[i] = key[PC1[i]-1];
+    }
+    return key56;
+}
+// powyżej napewno dobrze
+
 
 /// <summary>
 /// permutacja pc2 zmniejszająca długość klucza do 48 bitów;
 /// </summary>
 /// <param name="key">wynik funkcji key_shift</param>
 /// <returns>klucz w postaci wektora unsigned char [6] bity połączone potrzebny do funkcji feistela dla opowiedniej iteracji</returns>
-__device__ unsigned char* key_to_48(unsigned char key[56], unsigned char* test) {
-    for (int i = 0; i < 8; i++) {
-        test[i] = key[i];
-    }
+__device__ unsigned char* key_to_48(unsigned char key[56]) {
     unsigned char key_48[48];
     for (int i = 0; i < 48; i++) {
         key_48[i] = key[PC2[i] - 1];
@@ -232,41 +254,15 @@ __device__ unsigned char* key_to_48(unsigned char key[56], unsigned char* test) 
             key_final[i] = 0;
         }
     }
-
-
     for (int i = 0; i < 48; i++) {
         int target_byte = (int)i / 8;
         int target_bit = i % 8;
-        key_final[target_byte] = key_final[target_byte] | (key_48[i] << (7 - target_bit));
+        key_final[target_byte] |= (key_48[i] << (7 - target_bit));
     }
     return key_final;
 }
 
-/// <summary>
-/// początkowa permutacja na wiadomości
-/// </summary>
-/// <param name="plain">niezaszywrowana wiadomość</param>
-/// <returns>wiadomość do zaszywrowania z poprzestawianymi bitami</returns>
-__device__ unsigned char* initial_permutation(unsigned char plain[8]) {
-   
-    unsigned char* plain_permuted = (unsigned char*) malloc(8);
-    for (int i = 0; i < 8; i++) {
-        plain_permuted[i] = 0;
-    }
-    for (int i = 0; i < 8; i++) {
-        for (int j = 7; j >= 0; j--) {
-            int bit_shift = 7 - j - bitsIP[i];
-            if (bit_shift >= 0){
-                plain_permuted[i] |= ((plain[j] & bits[bitsIP[i]]) >> bit_shift);
-            }
-            else {
-                plain_permuted[i] |= ((plain[j] & bits[bitsIP[i]]) << (-bit_shift));
-            }
 
-        }
-    }
-    return plain_permuted;
-}
 
 /// <summary>
 /// funkcja feistela, albo przynajmniej jej część
@@ -390,6 +386,54 @@ __device__ void DESCipher(unsigned char key[64], unsigned char text[8], unsigned
     }
     free(plain_permuted);
     free(key_56);
+}
+/// <summary>
+/// Nie zapomnieć zwolnić to co zwraca ta funkcja, dowolny rozmiar hasła
+/// </summary>
+/// <param name="key">64 bitowy klucz</param>
+/// <param name="text">hasło</param>
+/// <param name="text_size">rozmiar hasła</param>
+/// <param name="test">do debugowania</param>
+/// <returns>zaszyfrowane hasło</returns>
+__device__ unsigned char* DES(unsigned char key[64], unsigned char* text, int text_size, unsigned char* test) {
+    int block_number;
+    int left_bytes = text_size % 8;
+    if ( left_bytes > 0) {
+        block_number = ((int)text_size / 8) +1;
+    }
+    else {
+        block_number = (int)text_size / 8;
+    }
+    unsigned char** blocks = (unsigned char**)malloc(sizeof (unsigned char*) * block_number);
+    for (int i = 0; i < block_number; i++) {
+        blocks[i] = (unsigned char*)malloc(8);
+        for (int j = 0; j < 8; j++) {
+            blocks[i][j] = 0;
+        }
+    }
+
+    unsigned char* finale = (unsigned char*)malloc(text_size);
+
+    //tu kod
+    //przekopiowanie wejścia
+    for (int i = 0; i < block_number - 1; i++) {
+        for (int j = 0; j < 8; j++) {
+            blocks[i][j] = text[i * 8 + j];
+        }
+    }
+    for (int i = 0; i < left_bytes; i++) {
+        blocks[block_number - 1][i] = text[(block_number - 1) * 8 + i];
+    }
+    for (int i = 0; i < block_number; i++) {
+        DESCipher(key, blocks[i], &(finale[i * 8]), test);
+    }
+
+    for (int i = 0; i < block_number; i++) {
+        free(blocks[i]);
+    }
+    free(blocks);
+
+    return finale;
 }
 
 /// <summary>
